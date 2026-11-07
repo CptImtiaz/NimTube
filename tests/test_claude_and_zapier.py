@@ -147,6 +147,7 @@ def test_gemini_discovers_model_and_skips_thought_parts(settings, monkeypatch):
 def test_gemini_research_model_with_fallback(settings, monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "AIza" + "y" * 35)
     monkeypatch.setenv("GEMINI_MODEL", "gemini-3.8-flash")
+    monkeypatch.setenv("GEMINI_RESEARCH_MODEL", "gemini-2.5-flash")
     calls = []
 
     def fake(method, url, **kw):
