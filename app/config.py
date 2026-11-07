@@ -12,11 +12,12 @@ ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = ROOT / "config"
 NICHES_DIR = ROOT / "niches"
 
-MODES = ("dry-run", "test", "private", "publish")
+MODES = ("dry-run", "test", "private", "publish", "queue")
 #  dry-run : discovery + topic + research + ranking + script only, no media, no upload
 #  test    : full video produced, NO upload
 #  private : full video, uploaded as PRIVATE
 #  publish : full video, uploaded with settings.publishing (public/unlisted/scheduled) if auto_publish is true
+#  queue   : full video, hosted + queued for a publish slot (nightly batch); sent to Zapier at the slot time
 
 
 def _load_yaml(path: Path) -> dict:

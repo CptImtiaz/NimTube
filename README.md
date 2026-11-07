@@ -3,7 +3,7 @@
 An autonomous, evidence-based **Top 10 documentary Shorts** bot for YouTube. Every day it discovers what the
 world is paying attention to, turns it into a rankable topic, researches it with verified sources, writes an
 original documentary script, produces narration and original visuals, renders a 1080×1920 video, checks rights
-and quality, and uploads it to your channel — on a Railway cron service (GitHub Actions also supported).
+and quality, and publishes 3 videos a day at global prime times — on GitHub Actions + Zapier.
 
 ```
  Trends (YouTube mostPopular ×12 countries · Google Trends RSS · Google News RSS · publisher RSS · Reddit)
@@ -22,7 +22,7 @@ and quality, and uploads it to your channel — on a Railway cron service (GitHu
 sudo apt-get install -y ffmpeg fonts-dejavu-core espeak-ng     # macOS: brew install ffmpeg espeak-ng
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
-python -m pytest -q                                            # 39 tests, mock APIs + real FFmpeg
+python -m pytest -q                                            # 51 tests, mock APIs + real FFmpeg
 python scripts/make_original_music.py                          # optional: original music bed
 python -m app run --mode test --mock                           # renders a sample video from offline fixtures
 ```

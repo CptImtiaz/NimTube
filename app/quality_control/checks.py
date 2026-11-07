@@ -106,7 +106,7 @@ def run_quality_checks(s: Settings, db: DB, job_id: str, *, video: Path, ranking
             if not Path(it["path"]).exists() or Path(it["path"]).stat().st_size < 10_000:
                 sc.append(f"#{rank}: visual missing or suspiciously small ({it['path']})")
     min_share = float(s.get("visuals.min_footage_share", 0.7))
-    if mode in ("private", "publish") and not s.mock and visuals.get("footage_share", 0) < min_share:
+    if mode in ("private", "publish", "queue") and not s.mock and visuals.get("footage_share", 0) < min_share:
         sc.append(f"only {visuals.get('footage_share', 0):.0%} of entries have real footage "
                   f"(minimum {min_share:.0%}) — add PEXELS_API_KEY / PIXABAY_API_KEY or adjust footage queries")
     if visuals.get("unique_assets", 0) < int(s.get("visuals.min_unique_assets", 12)):

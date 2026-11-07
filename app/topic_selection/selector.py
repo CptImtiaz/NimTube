@@ -156,8 +156,12 @@ def select_topic(s: Settings, db: DB, llm: LLM, trends: list[dict], job_id: str,
     # prefer the evergreen/trend mix configured
     share = float(s.get("topics.evergreen_share", 0.5))
     ok = [c for c in scored if not c["rejected_reason"]]
+    recent_niches = {r["niche"] for r in db.query(
+        "SELECT niche FROM topics WHERE selected=1 AND created_at > ?", (time.time() - 20 * 3600,))}
     for c in ok:
         c["_rank"] = c["score"] + (3 if (c["origin"] == "evergreen") == (random.random() < share) else 0)
+        if c.get("niche") in recent_niches:        # tonight's batch: prefer a different niche per video
+            c["_rank"] -= 8
     ok.sort(key=lambda c: -c["_rank"])
     chosen = ok[0] if ok else None
 

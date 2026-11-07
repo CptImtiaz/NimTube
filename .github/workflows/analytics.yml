@@ -1,6 +1,6 @@
 name: Analytics
 
-# Analytics runs on Railway with production; manual alternative only.
+# YouTube Analytics needs YT OAuth secrets; run manually when configured.
 on:
   workflow_dispatch:
 

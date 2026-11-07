@@ -1,4 +1,4 @@
-"""Publish through Zapier: the video is uploaded to private S3-compatible storage (Railway bucket), a
+"""Publish through Zapier: the video is uploaded to private S3-compatible storage (optional; default hosting is GitHub Releases), a
 time-limited presigned link is created, and a JSON payload is POSTed to your Zapier "Catch Hook".
 Your Zap then runs "YouTube: Upload Video" with those fields.
 

@@ -4,7 +4,7 @@ channel:
   language: en
 
 production:
-  videos_per_day: 1
+  videos_per_day: 3
   target_duration_sec: 90          # narration is planned for this; allowed range below
   min_duration_sec: 60
   max_duration_sec: 180
@@ -13,7 +13,17 @@ production:
 
 publishing:
   backend: zapier                  # zapier (Zapier "YouTube: Upload Video" via webhook) | youtube_api (direct OAuth)
-  link_valid_hours: 24             # how long the presigned video link sent to Zapier stays valid
+  # Nightly batch: 3 videos are made at 14:00 UTC (22:00 Malaysia) and each is published at one slot.
+  # Slots (UTC) are chosen so each hits evening prime time in a different big audience region:
+  #   17:30 UTC = 18:30 London / 19:30 Berlin / 23:00 India      -> Europe evening
+  #   23:30 UTC = 18:30 New York / 15:30 Los Angeles              -> Americas evening
+  #   11:30 UTC = 17:00 India / 19:30 Malaysia / 20:30 Japan      -> Asia evening
+  # If you change these, also change the cron lines in .github/workflows/publish.yml.
+  slots_utc: ["17:30", "23:30", "11:30"]
+  slot_send_early_min: 25          # a publish run may send a video up to this many minutes before its slot
+  hosting: github_release          # github_release (public repo release assets) | s3 (S3-compatible bucket)
+  keep_hosted_days: 3              # hosted copies are deleted after this (YouTube keeps the video)
+  link_valid_hours: 24             # only for s3 hosting
   auto_publish: false              # false = upload private only. Set true after testing.
   visibility: private              # private | unlisted | public  (used only if auto_publish: true)
   schedule_publish_at: null        # e.g. "18:00" (channel-local time below) to use publishAt; null = immediate

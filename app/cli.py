@@ -26,6 +26,10 @@ def main(argv=None):
     r.add_argument("--mock", action="store_true", help="offline fixtures (tests/demo only)")
     d = sub.add_parser("discover")
     d.add_argument("--mock", action="store_true")
+    n = sub.add_parser("nightly", help="produce one video per open publish slot (default 3) and queue them")
+    n.add_argument("--mock", action="store_true")
+    sub.add_parser("publish", help="send due queued videos to Zapier and clean up old hosted files")
+    sub.add_parser("queue", help="show the publish queue")
     sub.add_parser("analytics")
     sub.add_parser("jobs")
     sub.add_parser("check-config")
@@ -59,6 +63,42 @@ def main(argv=None):
         except PipelineStop as e:
             print(f"STOPPED: {e}", file=sys.stderr)
             return 3
+    if a.cmd == "nightly":
+        from .pipeline import run, PipelineStop
+        from .youtube_upload.queue import open_slots
+        s = load_settings("queue", mock=a.mock or None)
+        db = DB(s.db_path)
+        made, failed = [], []
+        # resume an interrupted job first (it keeps its slot)
+        row = db.one("SELECT id, data FROM jobs WHERE mode='queue' AND status IN ('running','failed') AND "
+                     "created_at > strftime('%s','now','-20 hours') ORDER BY created_at DESC LIMIT 1")
+        todo = []
+        if row:
+            todo.append((row["id"], json.loads(row["data"] or "{}").get("slot_utc")))
+        taken = {slot for _, slot in todo}
+        todo += [(None, slot) for slot in open_slots(s, db) if slot not in taken]
+        for resume, slot in todo:
+            try:
+                res = run(s, resume_job=resume, slot_utc=slot)
+                made.append({"slot": slot, "topic": res.get("topic"), "status": res.get("status")})
+            except PipelineStop as e:
+                failed.append({"slot": slot, "error": str(e)[:300]})
+            except Exception as e:                       # one bad video must not stop the other slots
+                failed.append({"slot": slot, "error": f"crash: {str(e)[:300]}"})
+        print(json.dumps({"made": made, "failed": failed}, indent=2))
+        return 0 if made or not todo else 4
+    if a.cmd == "publish":
+        from .youtube_upload.queue import publish_due, cleanup_hosting
+        s = load_settings("queue")
+        db = DB(s.db_path)
+        sent = publish_due(s, db)
+        print(json.dumps({"sent": sent, "hosting_cleaned": cleanup_hosting(s)}, indent=2))
+        return 0 if all(x["status"] == "sent" for x in sent) else 5
+    if a.cmd == "queue":
+        s = load_settings("queue")
+        for r in DB(s.db_path).query("SELECT slot_utc, status, job_id, error FROM publish_queue ORDER BY slot_utc DESC LIMIT 15"):
+            print(f"{r['slot_utc']}  {r['status']:<8} {r['job_id']}  {r['error'] or ''}")
+        return 0
     if a.cmd == "discover":
         from .trend_discovery.engine import discover
         s = load_settings("dry-run", mock=a.mock or None)

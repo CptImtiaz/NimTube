@@ -47,8 +47,9 @@ def test_daily_target_prevents_second_upload(settings):
     import time
     from app.db import DB
     db = DB(settings.db_path)
-    db.execute("INSERT INTO uploads (idempotency_key, job_id, status, youtube_id, created_at) VALUES (?,?,?,?,?)",
-               ("k", "old", "done", "y", time.time()))
+    for i in range(int(settings.get("production.videos_per_day", 1))):
+        db.execute("INSERT INTO uploads (idempotency_key, job_id, status, youtube_id, created_at) VALUES (?,?,?,?,?)",
+                   (f"k{i}", f"old{i}", "done", f"y{i}", time.time()))
     settings.mode = "private"
     with pytest.raises(PipelineStop, match="daily target"):
         run(settings)

@@ -5,7 +5,5 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-RUN chmod +x scripts/railway_run.sh
 ENV DATA_DIR=/data OUTPUT_DIR=/data/output PYTHONUNBUFFERED=1
-# Railway runs this on the cron schedule (service setting), then the container exits.
-CMD ["sh", "scripts/railway_run.sh"]
+CMD ["python", "-m", "app", "run", "--mode", "test"]

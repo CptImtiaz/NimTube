@@ -71,7 +71,7 @@ def notify(text: str):
         logger.warning(f"notification failed: {e}")
 
 
-def run(s: Settings, resume_job: str | None = None, forced_topic: str | None = None) -> dict:
+def run(s: Settings, resume_job: str | None = None, forced_topic: str | None = None, slot_utc: str | None = None) -> dict:
     db = DB(s.db_path)
     with _Lock(s.data_dir / ".production.lock"):
         job_id = resume_job or time.strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:6]
@@ -79,7 +79,7 @@ def run(s: Settings, resume_job: str | None = None, forced_topic: str | None = N
         if resume_job and not job:
             raise PipelineStop(f"job {resume_job} not found")
         if not job:
-            db.save_job(job_id, status="running", mode=s.mode, stage="start")
+            db.save_job(job_id, status="running", mode=s.mode, stage="start", data={"slot_utc": slot_utc})
             job = db.get_job(job_id)
         data: dict = job["data"]
         work = s.output_dir / job_id
@@ -205,15 +205,27 @@ def run(s: Settings, resume_job: str | None = None, forced_topic: str | None = N
                 save("metadata", meta)
             meta = data["metadata"]
 
+            qc_mode = s.mode
+            if s.mode == "queue":
+                qc_mode = "publish" if s.get("publishing.auto_publish", False) else "private"
             qc = timed("qc", lambda: run_quality_checks(s, db, job_id, video=video, ranking=ranking, script=script,
-                                                        voices=voices, visuals=visuals, metadata=meta, mode=s.mode))
+                                                        voices=voices, visuals=visuals, metadata=meta, mode=qc_mode))
             save("qc", qc)
             if not qc["passed"]:
                 (work / "ERROR_REPORT.md").write_text("# Quality gate failed\n\n" + "\n".join(
                     f"- {f}" for f in qc["failures"]), encoding="utf-8")
                 raise PipelineStop("quality/copyright gate failed: " + "; ".join(qc["failures"][:10]))
 
-            if s.mode in ("private", "publish"):
+            if s.mode == "queue":
+                if not done("upload"):
+                    from .youtube_upload.queue import enqueue
+                    slot = data.get("slot_utc") or slot_utc
+                    if not slot:
+                        raise PipelineStop("queue mode needs a publish slot")
+                    save("upload", timed("upload", lambda: enqueue(s, db, job_id, video, meta, slot)))
+                result["upload"] = data["upload"]
+                status = f"queued for {data['upload'].get('slot_utc')}"
+            elif s.mode in ("private", "publish"):
                 if not done("upload"):
                     backend = env("UPLOAD_BACKEND") or s.get("publishing.backend", "zapier")
                     if backend == "zapier":

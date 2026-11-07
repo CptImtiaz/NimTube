@@ -67,34 +67,32 @@ Repository → **Settings → Secrets and variables → Actions**:
 Secrets are only exposed as environment variables; logs pass through a redaction filter and
 `check-config` prints names only.
 
-## 4. Deployment on Railway (recommended — what this project uses)
+## 4. Deployment — GitHub Actions + Zapier (current setup)
 
-* Project **global-top10-ai** → service **producer**, built from the repo's `Dockerfile`.
-* **Cron schedule** `0 0 * * *` (UTC) = **08:00 Malaysia time**; restart policy *Never*. Each run executes
-  `scripts/railway_run.sh` (analytics → produce → one auto-resume → cleanup) and exits.
-* **Volume** `gt10-data` mounted at `/data` holds the database (`/data/global_top10.db`, plus `backup.db`)
-  and rendered videos (`/data/output`, kept 7 days). No encrypted git state is needed on Railway.
-* **Variables** (service → Variables → *Raw Editor*): paste your keys there yourself:
-  ```
-  ANTHROPIC_API_KEY=...         # Claude (enable web search in the Claude Console)
-  ZAPIER_UPLOAD_HOOK=...        # see docs/ZAPIER_SETUP.md
-  YOUTUBE_API_KEY=...           # trends only (simple API key, free)
-  PEXELS_API_KEY=...
-  PIXABAY_API_KEY=...
-  ELEVENLABS_API_KEY=...        # optional (best voice)
-  ELEVENLABS_VOICE_ID=...       # optional
-  GEMINI_API_KEY=...            # optional backup LLM
-  NOTIFY_WEBHOOK_URL=...        # optional
-  ```
-  Already set: `PRODUCTION_MODE`, `DATA_DIR=/data`, `OUTPUT_DIR=/data/output`, `KEEP_DAYS=7`,
-  `UPLOAD_BACKEND=zapier`, and the `S3_*` references to the **gt10-videos** bucket.
-  Voice without OpenAI: add `ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_ID` (recommended), otherwise Edge TTS is used
-  (fine for private tests; blocked for public publishing because it has no commercial licence).
-* **Test run now:** service → Deployments → *Deploy* / *Run now*; watch the logs. Set `PRODUCTION_MODE=test`
-  first if you only want a render without upload.
-* **Go public later:** `PRODUCTION_MODE=publish` + `publishing.auto_publish: true` in `config/settings.yaml`.
+```
+22:00 MYT  nightly.yml   Claude researches 3 topics -> 3 videos rendered -> hosted as release assets -> queued
+17:30 UTC  publish.yml   video 1 -> Zapier -> YouTube   (Europe evening)
+23:30 UTC  publish.yml   video 2 -> Zapier -> YouTube   (Americas evening)
+11:30 UTC  publish.yml   video 3 -> Zapier -> YouTube   (Asia evening)
+```
 
-## 4b. Deployment on GitHub Actions (alternative)
+1. **Secrets** — repo → Settings → Secrets and variables → Actions → *New repository secret*:
+   `ANTHROPIC_API_KEY`, `ZAPIER_UPLOAD_HOOK`, `YOUTUBE_API_KEY`, `PEXELS_API_KEY`, `PIXABAY_API_KEY`,
+   `STATE_PASSPHRASE` (+ optional `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `NOTIFY_WEBHOOK_URL`).
+2. **Permissions** — Settings → Actions → General → *Workflow permissions* → **Read and write**.
+3. **Zap** — see `docs/ZAPIER_SETUP.md`.
+4. **Test** — Actions → *Single video (manual test)* → mode `test` → download the artifact and watch it.
+   Then Actions → *Nightly production* → *Run workflow*; afterwards *Publish slot* runs on its own.
+5. **Go public** — after testing, set `publishing.auto_publish: true` and `visibility: public` in
+   `config/settings.yaml` (until then every video is uploaded **private**).
+
+Notes: the repo is public, so GitHub Actions minutes are free. Videos are hosted as assets of a temporary
+`queue-YYYYMMDD` pre-release (anyone browsing the repo's Releases could see them until they are deleted after
+3 days); the database is stored encrypted on the `bot-state` branch. GitHub may start scheduled runs late —
+publish runs start 20 minutes early and wait for the slot. To change the slots, edit `publishing.slots_utc`
+**and** the cron lines in `.github/workflows/publish.yml`.
+
+## 4b. Deployment on GitHub Actions — single daily video (alternative)
 
 1. Push the repository to GitHub (private recommended).
 2. Add the secrets above. Repository → Settings → Actions → General → Workflow permissions:

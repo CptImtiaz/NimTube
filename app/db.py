@@ -66,6 +66,14 @@ MIGRATIONS: list[str] = [
         day TEXT, provider TEXT, units REAL, cost_usd REAL, PRIMARY KEY (day, provider)
     );
     """,
+    # 2 — publish queue (nightly batch -> timed publishing)
+    """
+    CREATE TABLE IF NOT EXISTS publish_queue (
+        idempotency_key TEXT PRIMARY KEY, job_id TEXT, slot_utc TEXT, video_url TEXT, thumbnail_url TEXT,
+        meta TEXT, status TEXT, created_at REAL, sent_at REAL, error TEXT
+    );
+    CREATE INDEX IF NOT EXISTS ix_queue_slot ON publish_queue(slot_utc);
+    """,
 ]
 
 

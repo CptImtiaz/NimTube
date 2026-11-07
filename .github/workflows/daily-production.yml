@@ -1,15 +1,15 @@
-name: Daily production
+name: Single video (manual test)
 
-# Production runs on RAILWAY (cron service). This workflow is a manual alternative only —
-# to use GitHub Actions instead, add back:  schedule: [{cron: "0 0 * * *"}]   (08:00 Malaysia time)
+# Manual test: make ONE video now. mode=test (artifact only) or private (sent to Zapier as private).
+# Daily production is nightly.yml + publish.yml.
 on:
   workflow_dispatch:
     inputs:
       mode:
         description: "dry-run | test (no upload) | private (upload private) | publish (uses settings.publishing)"
         type: choice
-        options: [private, test, dry-run, publish]
-        default: private
+        options: [test, private, dry-run]
+        default: test
       topic:
         description: "Optional: force a topic, e.g. 'Top 10 Largest Lakes in the World'"
         required: false
@@ -27,8 +27,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
-      PRODUCTION_MODE: ${{ inputs.mode || vars.PRODUCTION_MODE || 'private' }}
+      PRODUCTION_MODE: ${{ inputs.mode || 'test' }}
       FORCED_TOPIC: ${{ inputs.topic }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      ZAPIER_UPLOAD_HOOK: ${{ secrets.ZAPIER_UPLOAD_HOOK }}
+      PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+      ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
@@ -55,7 +60,7 @@ jobs:
       - name: Install FFmpeg, fonts, offline TTS
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y -q ffmpeg fonts-dejavu-core espeak-ng
+          sudo apt-get install -y -q ffmpeg fonts-dejavu-core
 
       - name: Install Python dependencies
         run: pip install -r requirements.txt

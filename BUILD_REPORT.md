@@ -4,6 +4,15 @@ Build date: 2026-11-07 · Python 3.12/3.13 · ≈3,400 lines of application code
 This report states plainly what works, what was tested, and what was **not** possible to test in the build
 environment.
 
+## Update — GitHub Actions nightly batch, 3 videos/day (2026-11-07)
+
+* Railway removed. **`nightly.yml`** (14:00 UTC = 22:00 MYT) produces one video per open slot (3), each with a
+  different niche where possible; a failed video doesn't stop the others; interrupted jobs resume next night.
+* **`publish.yml`** runs at 17:30 / 23:30 / 11:30 UTC (Europe / Americas / Asia evening prime time) and sends the
+  due video to Zapier for an immediate upload (works without YouTube Partner status). Sent at most once.
+* Videos are hosted as release assets of the public repo (temporary `queue-*` pre-releases, deleted after 3 days).
+* Tests: **51 passed**.
+
 ## Update — Claude API + Zapier (2026-11-07)
 
 * **Claude is now the primary LLM** (`claude-sonnet-5-5` via the Messages API). Research uses Claude's server-side

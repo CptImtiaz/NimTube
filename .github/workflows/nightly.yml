@@ -1,0 +1,66 @@
+name: Nightly production (3 videos)
+
+on:
+  schedule:
+    - cron: "0 14 * * *"       # 14:00 UTC = 22:00 Malaysia time. Makes one video per open publish slot.
+  workflow_dispatch:
+
+permissions:
+  contents: write              # encrypted state branch + release assets that host the videos for Zapier
+
+concurrency:
+  group: gt10-bot-state
+  cancel-in-progress: false
+
+jobs:
+  produce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+      ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+      ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
+      REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+      REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+      STATE_PASSPHRASE: ${{ secrets.STATE_PASSPHRASE }}
+      NOTIFY_WEBHOOK_URL: ${{ secrets.NOTIFY_WEBHOOK_URL }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OUTPUT_DIR: ${{ github.workspace }}/output
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install FFmpeg and fonts
+        run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg fonts-dejavu-core
+      - run: pip install -r requirements.txt
+      - name: Restore encrypted state
+        run: python scripts/state.py pull
+      - name: Check configuration (names only)
+        run: python -m app check-config
+      - name: Produce and queue tonight's videos
+        run: python -m app nightly
+      - name: Show publish queue
+        if: always()
+        run: python -m app queue
+      - name: Save encrypted state
+        if: always()
+        run: python scripts/state.py push
+      - name: Upload artifacts (videos + reports)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-${{ github.run_id }}
+          path: |
+            output/**/report.md
+            output/**/ERROR_REPORT.md
+            output/**/render/final.mp4
+            output/**/thumbnail.jpg
+          retention-days: 7
+          if-no-files-found: warn
