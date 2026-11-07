@@ -1,4 +1,4 @@
-"""Interchangeable LLM providers (OpenAI Responses API, Gemini API) over plain REST.
+"""Interchangeable LLM providers (Claude Messages API, OpenAI Responses API, Gemini API) over plain REST.
 
 Two capabilities:
   complete_json(task, system, prompt)  -> dict         plain generation, JSON output
@@ -115,6 +115,82 @@ class OpenAIProvider:
         return self._text_and_urls(data)
 
 
+class AnthropicProvider:
+    """Claude via the Messages API. Research uses the server-side web search tool (web_search_20250305);
+    the org admin must enable web search in the Claude Console."""
+    name = "anthropic"
+    URL = "https://api.anthropic.com/v1/messages"
+
+    def __init__(self, s: Settings, db=None):
+        self.key = env("ANTHROPIC_API_KEY")
+        self.model = s.get("ai.anthropic_model", "claude-sonnet-5-5")
+        self.research_model = s.get("ai.anthropic_research_model", self.model)
+        self.temperature = s.get("ai.temperature", 0.6)
+        self.prices = s.get("ai.anthropic_prices_per_mtok")      # [input, output] USD — set in settings.yaml
+        self.max_searches = int(s.get("ai.anthropic_max_searches", 8))
+        self.db = db
+
+    @property
+    def available(self):
+        return bool(self.key)
+
+    def _call(self, body: dict) -> dict:
+        r = http.request("POST", self.URL, json=body, timeout=300,
+                         headers={"x-api-key": self.key, "anthropic-version": "2023-06-01",
+                                  "content-type": "application/json"})
+        if r.status_code >= 400:
+            raise LLMError(f"anthropic {r.status_code}: {r.text[:400]}")
+        data = r.json()
+        u = data.get("usage") or {}
+        cost = 0.0
+        if self.prices:
+            cost = (u.get("input_tokens", 0) * self.prices[0] + u.get("output_tokens", 0) * self.prices[1]) / 1e6
+        searches = (u.get("server_tool_use") or {}).get("web_search_requests", 0)
+        if self.db:
+            self.db.add_usage("anthropic", u.get("input_tokens", 0) + u.get("output_tokens", 0), cost)
+            if searches:
+                self.db.add_usage("anthropic_web_search", searches, searches * WEB_SEARCH_CALL_USD)
+        return data
+
+    @staticmethod
+    def _text_and_urls(content: list) -> tuple[str, list[dict]]:
+        texts, urls = [], []
+        for b in content:
+            if b.get("type") == "text":
+                texts.append(b.get("text", ""))
+                for c in b.get("citations") or []:
+                    if c.get("url"):
+                        urls.append({"url": c["url"], "title": c.get("title", "")})
+            elif b.get("type") == "web_search_tool_result" and isinstance(b.get("content"), list):
+                for res in b["content"]:
+                    if res.get("url"):
+                        urls.append({"url": res["url"], "title": res.get("title", "")})
+        return "".join(texts), urls
+
+    def complete(self, system: str, prompt: str) -> str:
+        data = self._call({"model": self.model, "max_tokens": 8000, "temperature": self.temperature,
+                           "system": system + "\nRespond with a single valid JSON object and nothing else.",
+                           "messages": [{"role": "user", "content": prompt}]})
+        return self._text_and_urls(data.get("content", []))[0]
+
+    def research(self, system: str, prompt: str) -> tuple[str, list[dict]]:
+        messages = [{"role": "user", "content": prompt}]
+        body = {"model": self.research_model, "max_tokens": 12000, "temperature": 0.2,
+                "system": system + "\nAfter researching, reply with a single valid JSON object as your final text.",
+                "tools": [{"type": "web_search_20250305", "name": "web_search", "max_uses": self.max_searches}],
+                "messages": messages}
+        all_content: list = []
+        for _ in range(5):                       # long searches may pause the turn; continue it
+            data = self._call(body)
+            all_content += data.get("content", [])
+            if data.get("stop_reason") != "pause_turn":
+                break
+            messages.append({"role": "assistant", "content": data.get("content", [])})
+        final_text, _ = self._text_and_urls(data.get("content", []))
+        _, urls = self._text_and_urls(all_content)
+        return final_text, urls
+
+
 class GeminiProvider:
     name = "gemini"
 
@@ -197,11 +273,12 @@ class LLM:
         if s.mock:
             self.providers = [MockProvider()]
         else:
-            all_p = {"openai": OpenAIProvider(s, db), "gemini": GeminiProvider(s, db)}
-            order = s.get("ai.llm_provider_order", ["openai", "gemini"])
+            all_p = {"anthropic": AnthropicProvider(s, db), "openai": OpenAIProvider(s, db),
+                     "gemini": GeminiProvider(s, db)}
+            order = s.get("ai.llm_provider_order", ["anthropic", "openai", "gemini"])
             self.providers = [all_p[n] for n in order if n in all_p and all_p[n].available]
         if not self.providers:
-            raise LLMError("No LLM provider configured. Set OPENAI_API_KEY and/or GEMINI_API_KEY.")
+            raise LLMError("No LLM provider configured. Set ANTHROPIC_API_KEY (or OPENAI_API_KEY / GEMINI_API_KEY).")
 
     def _run(self, task: str, fn_name: str, system: str, prompt: str):
         errors = []

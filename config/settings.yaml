@@ -12,6 +12,8 @@ production:
   ranking_size: 10
 
 publishing:
+  backend: zapier                  # zapier (Zapier "YouTube: Upload Video" via webhook) | youtube_api (direct OAuth)
+  link_valid_hours: 24             # how long the presigned video link sent to Zapier stays valid
   auto_publish: false              # false = upload private only. Set true after testing.
   visibility: private              # private | unlisted | public  (used only if auto_publish: true)
   schedule_publish_at: null        # e.g. "18:00" (channel-local time below) to use publishAt; null = immediate
@@ -87,7 +89,11 @@ video:
   transition_sec: 0.35
 
 ai:
-  llm_provider_order: [openai, gemini]
+  llm_provider_order: [anthropic, openai, gemini]   # first one with an API key is used; others are fallbacks
+  anthropic_model: claude-sonnet-5-5
+  anthropic_research_model: claude-sonnet-5-5
+  anthropic_max_searches: 8
+  anthropic_prices_per_mtok: null    # e.g. [3.0, 15.0] — fill in from the Claude pricing page for cost reports
   openai_model: gpt-4.1-mini
   openai_research_model: gpt-4.1
   gemini_model: gemini-2.5-flash

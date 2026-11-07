@@ -4,6 +4,17 @@ Build date: 2026-11-07 · Python 3.12/3.13 · ≈3,400 lines of application code
 This report states plainly what works, what was tested, and what was **not** possible to test in the build
 environment.
 
+## Update — Claude API + Zapier (2026-11-07)
+
+* **Claude is now the primary LLM** (`claude-sonnet-5-5` via the Messages API). Research uses Claude's server-side
+  web search tool (`web_search_20250305`) and follows `pause_turn`; citations and search results are collected and
+  every quote is still independently verified by fetching the page. OpenAI/Gemini remain optional fallbacks.
+* **Uploading goes through Zapier** by default: video → private Railway bucket → 24 h presigned link → Zapier
+  Catch Hook → *YouTube: Upload Video*. Sent at most once; unknown send states never auto-resend. No Google OAuth
+  or API audit needed for uploads. Direct YouTube API upload is still available (`UPLOAD_BACKEND=youtube_api`).
+* Voice without an OpenAI key: ElevenLabs (exact timings) → Edge (exact timings, private/test only).
+* Tests: **45 passed**. Not live-tested: Claude, Zapier, bucket upload (need your keys).
+
 ## Update — footage-first visuals, better voice, Railway (2026-11-07)
 
 * **Real footage is now the main visual.** The script writer gives 3 filmable search terms per entry; the planner

@@ -76,11 +76,9 @@ Secrets are only exposed as environment variables; logs pass through a redaction
   and rendered videos (`/data/output`, kept 7 days). No encrypted git state is needed on Railway.
 * **Variables** (service → Variables → *Raw Editor*): paste your keys there yourself:
   ```
-  OPENAI_API_KEY=...
-  YOUTUBE_API_KEY=...
-  YT_CLIENT_ID=...
-  YT_CLIENT_SECRET=...
-  YT_REFRESH_TOKEN=...
+  ANTHROPIC_API_KEY=...         # Claude (enable web search in the Claude Console)
+  ZAPIER_UPLOAD_HOOK=...        # see docs/ZAPIER_SETUP.md
+  YOUTUBE_API_KEY=...           # trends only (simple API key, free)
   PEXELS_API_KEY=...
   PIXABAY_API_KEY=...
   ELEVENLABS_API_KEY=...        # optional (best voice)
@@ -88,7 +86,10 @@ Secrets are only exposed as environment variables; logs pass through a redaction
   GEMINI_API_KEY=...            # optional backup LLM
   NOTIFY_WEBHOOK_URL=...        # optional
   ```
-  Already set: `PRODUCTION_MODE=private`, `DATA_DIR=/data`, `OUTPUT_DIR=/data/output`, `KEEP_DAYS=7`.
+  Already set: `PRODUCTION_MODE`, `DATA_DIR=/data`, `OUTPUT_DIR=/data/output`, `KEEP_DAYS=7`,
+  `UPLOAD_BACKEND=zapier`, and the `S3_*` references to the **gt10-videos** bucket.
+  Voice without OpenAI: add `ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_ID` (recommended), otherwise Edge TTS is used
+  (fine for private tests; blocked for public publishing because it has no commercial licence).
 * **Test run now:** service → Deployments → *Deploy* / *Run now*; watch the logs. Set `PRODUCTION_MODE=test`
   first if you only want a render without upload.
 * **Go public later:** `PRODUCTION_MODE=publish` + `publishing.auto_publish: true` in `config/settings.yaml`.

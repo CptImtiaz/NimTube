@@ -215,11 +215,17 @@ def run(s: Settings, resume_job: str | None = None, forced_topic: str | None = N
 
             if s.mode in ("private", "publish"):
                 if not done("upload"):
-                    from .youtube_upload.publisher import upload
-                    save("upload", timed("upload", lambda: upload(s, db, job_id, s.mode, video, meta,
-                                                                  Path(render["srt"]))))
+                    backend = env("UPLOAD_BACKEND") or s.get("publishing.backend", "zapier")
+                    if backend == "zapier":
+                        from .youtube_upload.zapier import upload_via_zapier
+                        save("upload", timed("upload", lambda: upload_via_zapier(s, db, job_id, s.mode, video, meta)))
+                    else:
+                        from .youtube_upload.publisher import upload
+                        save("upload", timed("upload", lambda: upload(s, db, job_id, s.mode, video, meta,
+                                                                      Path(render["srt"]))))
                 result["upload"] = data["upload"]
-                status = "published" if data["upload"].get("privacy") == "public" else "uploaded"
+                status = ("sent to Zapier" if data["upload"].get("status") in ("sent_to_zapier", "already_sent")
+                          else "published" if data["upload"].get("privacy") == "public" else "uploaded")
             else:
                 status = "rendered (test mode, not uploaded)"
             db.save_job(job_id, status=status, stage="done")

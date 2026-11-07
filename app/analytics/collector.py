@@ -49,6 +49,10 @@ def collect(s: Settings, db: DB, ya=None) -> int:
                    "WHERE u.status='done' AND u.youtube_id IS NOT NULL")
     if not ups:
         return 0
+    from ..config import env
+    if ya is None and not env("YT_REFRESH_TOKEN"):
+        logger.info("YouTube Analytics skipped: no YT OAuth token (Zapier-only setup)")
+        return 0
     ya = ya or _analytics_client()
     n = 0
     for u in ups:
