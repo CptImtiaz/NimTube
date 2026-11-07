@@ -45,6 +45,7 @@ def test_single_daily_video_uses_priority_slot(settings):
 def test_enqueue_then_publish_only_when_due_and_once(settings, db, video, monkeypatch):
     settings.raw["production"]["videos_per_day"] = 3
     monkeypatch.setenv("ZAPIER_UPLOAD_HOOK", "https://hooks.zapier.com/hooks/catch/1/x/")
+    settings.raw["publishing"]["backend"] = "zapier"
     key = idempotency_key("j1", video)
     hoster = lambda p, name, ct: f"https://github.com/CptImtiaz/NimTube/releases/download/queue-1/{name}"
     r = queue.enqueue(settings, db, "j1", video, _meta(key), "2026-11-08T17:30:00Z", hoster=hoster)
@@ -64,6 +65,7 @@ def test_enqueue_then_publish_only_when_due_and_once(settings, db, video, monkey
 
 def test_public_when_auto_publish(settings, db, video, monkeypatch):
     monkeypatch.setenv("ZAPIER_UPLOAD_HOOK", "https://hooks.zapier.com/hooks/catch/1/x/")
+    settings.raw["publishing"]["backend"] = "zapier"
     settings.raw["publishing"].update(auto_publish=True, visibility="public", schedule_publish_at=None)
     key = idempotency_key("j2", video)
     queue.enqueue(settings, db, "j2", video, _meta(key), "2026-11-08T17:30:00Z", hoster=lambda *a: "https://x/v.mp4")
@@ -75,6 +77,7 @@ def test_public_when_auto_publish(settings, db, video, monkeypatch):
 
 def test_unknown_send_is_never_retried_and_rejection_is(settings, db, video, monkeypatch):
     monkeypatch.setenv("ZAPIER_UPLOAD_HOOK", "https://hooks.zapier.com/hooks/catch/1/x/")
+    settings.raw["publishing"]["backend"] = "zapier"
     for j in ("a", "b"):
         queue.enqueue(settings, db, j, video, _meta(idempotency_key(j, video)), "2026-11-08T17:30:00Z" if j == "a"
                       else "2026-11-08T23:30:00Z", hoster=lambda *a: "https://x/v.mp4")
@@ -137,3 +140,19 @@ def test_upload_uses_native_youtube_schedule(settings, db, tmp_path):
     pub.upload(settings, db, "job2", "publish", video2, {"title": "T", "description": f"ref: {key2}", "tags": []},
                yt=YT(), schedule_at="2026-11-09T23:30:00Z")
     assert "publishAt" not in sent["body"]["status"]
+
+
+def test_claude_zapier_mode_hosts_manifest_and_skips_webhook(settings, db, video):
+    import json as _json
+    settings.raw["publishing"]["backend"] = "claude_zapier"
+    hosted = {}
+
+    def hoster(path, name, ct):
+        hosted[name] = path.read_text() if name.endswith(".json") else "video"
+        return f"https://example.com/{name}"
+    key = queue.idempotency_key("jobm", video)
+    queue.enqueue(settings, db, "jobm", video, _meta(key), "2026-11-08T23:30:00Z", hoster=hoster)
+    m = _json.loads(hosted["jobm.json"])
+    assert m["video_url"] == "https://example.com/jobm.mp4" and m["slot_utc"] == "2026-11-08T23:30:00Z"
+    assert m["idempotency_key"] == key and m["privacy"] == "private"
+    assert queue.publish_due(settings, db, datetime(2026, 11, 9, 0, 0, tzinfo=timezone.utc)) == []

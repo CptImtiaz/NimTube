@@ -124,6 +124,12 @@ def enqueue(s: Settings, db: DB, job_id: str, video: Path, meta: dict, slot_utc:
         thumb_url = hoster(Path(meta["thumbnail"]), f"{job_id}-thumbnail.jpg", "image/jpeg")
     db.execute("INSERT INTO publish_queue VALUES (?,?,?,?,?,?,?,?,?,?)",
                (key, job_id, slot_utc, video_url, thumb_url, json.dumps(meta), "queued", time.time(), None, None))
+    if s.get("publishing.backend", "zapier") == "claude_zapier":
+        # the scheduled Claude upload task reads this manifest from the release and uploads via Zapier
+        row = db.one("SELECT * FROM publish_queue WHERE idempotency_key=?", (key,))
+        manifest = Path(video).with_name(f"{job_id}.json")
+        manifest.write_text(json.dumps(payload_for(s, row), indent=2), encoding="utf-8")
+        hoster(manifest, f"{job_id}.json", "application/json")
     logger.info(f"queued {job_id} for {slot_utc}")
     return {"status": "queued", "slot_utc": slot_utc, "video_url": video_url, "idempotency_key": key}
 
@@ -141,6 +147,8 @@ def payload_for(s: Settings, row: dict) -> dict:
 
 def publish_due(s: Settings, db: DB, now: datetime | None = None, poster=None) -> list[dict]:
     """Send every queued video whose slot is now (or past, or within the early window) to Zapier."""
+    if s.get("publishing.backend", "zapier") == "claude_zapier":
+        return []        # uploads are done by the scheduled Claude task through its Zapier connection
     hook = env("ZAPIER_UPLOAD_HOOK")
     if not hook:
         raise PublishError("ZAPIER_UPLOAD_HOOK not set")

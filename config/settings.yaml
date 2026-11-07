@@ -12,7 +12,9 @@ production:
   ranking_size: 10
 
 publishing:
-  backend: zapier                  # zapier = bot sends each video to Zapier at its slot time (public right away)
+  backend: claude_zapier           # claude_zapier = a scheduled Claude task uploads each video via its Zapier
+                                   #   connection at the slot (reads the manifest in the queue-YYYYMMDD release)
+                                   # zapier = bot posts to a Zapier Catch Hook (ZAPIER_UPLOAD_HOOK)
                                    # youtube_api = YouTube's own scheduling (needs YT_* secrets + passed API audit)
   # Nightly batch: 3 videos are made at 14:00 UTC (22:00 Malaysia) and each is published at one slot.
   # Slots (UTC) are chosen so each hits evening prime time in a different big audience region:
@@ -24,7 +26,7 @@ publishing:
   slots_utc: ["23:30", "17:30", "11:30"]
   slot_send_early_min: 25          # a publish run may send a video up to this many minutes before its slot
   hosting: github_release          # github_release (public repo release assets) | s3 (S3-compatible bucket)
-  keep_hosted_days: 3              # hosted copies are deleted after this (YouTube keeps the video)
+  keep_hosted_days: 2              # hosted copies are deleted after this (YouTube keeps the video)
   link_valid_hours: 24             # only for s3 hosting
   auto_publish: false              # false = upload private only. true = schedule PUBLIC at the slot times.
   visibility: private              # private | unlisted | public  (used only if auto_publish: true)
