@@ -269,7 +269,7 @@ class GeminiProvider:
         url = f"{self.BASE}/models/{use}:generateContent"
         r = http.request("POST", url, json=body, timeout=240, headers={"x-goog-api-key": self.key}, retries=5)
         self._last = _t.monotonic()
-        if r.status_code in (404, 400) and model and model != self.model and "not found" in r.text.lower():
+        if r.status_code == 404 and model and model != self.model:          # retired / unavailable model
             logger.warning(f"gemini research model {model} is not available — using {self.model}")
             self.research_model = ""
             return self._call(body)
