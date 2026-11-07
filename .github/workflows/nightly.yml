@@ -53,6 +53,9 @@ jobs:
         run: python -m app check-config
       - name: Produce and queue tonight's videos
         run: python -m app nightly
+      - name: Print run report
+        if: always()
+        run: for f in output/*/report.md; do [ -f "$f" ] && cat "$f"; done; true
       - name: Show publish queue
         if: always()
         run: python -m app queue

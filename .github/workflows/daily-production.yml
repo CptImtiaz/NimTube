@@ -98,6 +98,9 @@ jobs:
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           exit $code
 
+      - name: Print run report
+        if: always()
+        run: for f in output/*/report.md; do [ -f "$f" ] && cat "$f"; done; true
       - name: Save encrypted state
         if: always()
         run: python scripts/state.py push

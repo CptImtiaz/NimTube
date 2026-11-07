@@ -298,6 +298,11 @@ def _finish(s: Settings, db: DB, job_id: str, data: dict, result: dict, work: Pa
         u = data["upload"]
         lines += [f"- **YouTube:** {u.get('url', u.get('youtube_id'))} — {u.get('privacy')} {u.get('publish_at') or ''} "
                   f"({u.get('status')})"]
+    sc = data.get("script") or {}
+    if sc:
+        lines += ["", "### Script", "", f"> {sc.get('hook', '')} {sc.get('intro', '')}"]
+        lines += [f"> **#{seg.get('rank')}** {seg.get('narration', '')}" for seg in sc.get("segments", [])]
+        lines += [f"> {sc.get('ending', '')} {sc.get('subscribe', '')}", ""]
     lines += [f"- **Stage timings (s):** {json.dumps(data.get('timings', {}))}",
               f"- **Estimated API cost today:** ${result['cost_usd_today']}"]
     report = "\n".join(lines) + "\n"
