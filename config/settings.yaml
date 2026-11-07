@@ -1,0 +1,94 @@
+# GLOBAL TOP 10 AI — main settings. Safe to edit; secrets NEVER go here (use env / GitHub Secrets).
+channel:
+  name: "GLOBAL TOP 10 AI"
+  language: en
+
+production:
+  videos_per_day: 1
+  target_duration_sec: 90          # narration is planned for this; allowed range below
+  min_duration_sec: 60
+  max_duration_sec: 180
+  words_per_second: 2.5            # narration pace used for planning
+  ranking_size: 10
+
+publishing:
+  auto_publish: false              # false = upload private only. Set true after testing.
+  visibility: private              # private | unlisted | public  (used only if auto_publish: true)
+  schedule_publish_at: null        # e.g. "18:00" (channel-local time below) to use publishAt; null = immediate
+  channel_timezone: "Asia/Kuala_Lumpur"
+  category_id: "27"                # 27 = Education
+  upload_thumbnail: true
+  upload_captions: false           # needs the broad youtube.force-ssl scope; captions are burned in anyway
+  pinned_comment: false            # needs youtube.force-ssl scope; off by default (least privilege)
+
+trends:
+  # Regions used to estimate worldwide interest. Use ISO 3166-1 alpha-2 codes.
+  regions: [US, GB, IN, CA, AU, DE, FR, BR, JP, MY, NG, ZA]
+  min_countries_for_global: 3      # never call a topic "global" with fewer countries
+  youtube_max_results: 50
+  news_feeds_per_region: true
+  extra_rss_feeds:
+    - https://feeds.bbci.co.uk/news/world/rss.xml
+    - https://feeds.bbci.co.uk/news/science_and_environment/rss.xml
+    - https://feeds.bbci.co.uk/news/technology/rss.xml
+  reddit_subreddits: [todayilearned, Damnthatsinteresting, space, technology]  # needs Reddit creds; skipped otherwise
+
+topics:
+  evergreen_share: 0.5             # probability weight for evergreen vs trending candidates
+  min_topic_score: 60              # 0-100; below this, the topic is rejected
+  repeat_block_days: 120           # don't repeat a similar topic within N days
+  enabled_niches: [general, science, technology, history, entertainment, animals, business, geography]
+  excluded_keywords: [election, shooting, war crimes, suicide, terror, abortion]  # never make videos on these
+
+research:
+  min_independent_sources: 2       # distinct domains per topic
+  min_verified_facts_per_entry: 1
+  max_source_fetch_kb: 1500
+  fetch_timeout_sec: 20
+
+voice:
+  provider_order: [elevenlabs, openai, edge]   # first configured one wins (espeak is used ONLY in --mock tests)
+  openai_voice: onyx                # try: onyx, ash, ballad, sage, verse
+  openai_model: gpt-4o-mini-tts
+  openai_instructions: >-
+    Voice: a seasoned nature-and-science documentary narrator. Deep, warm and resonant, calm authority.
+    Tone: awe and curiosity, never salesy. Pacing: unhurried but tight; brief dramatic pause before each
+    number reveal and before the final reveal; slightly lift energy on surprising facts.
+    Pronunciation: crisp consonants, numbers spoken clearly and completely.
+  elevenlabs_model: eleven_multilingual_v2
+  align_with_whisper: true          # exact word timings for captions via OpenAI transcription (~$0.01/video)
+  polish: "highpass=f=70,acompressor=threshold=-20dB:ratio=3:attack=5:release=90:makeup=2,equalizer=f=3200:t=q:w=1.2:g=2.5,equalizer=f=250:t=q:w=1:g=-1.5"
+  elevenlabs_voice_id: ""          # set to a voice you are licensed to use
+  edge_voice: en-US-AndrewNeural
+  speed: 1.0                       # 0.8 - 1.2
+  pitch_hz: 0
+  pronunciations:                  # word -> spoken form
+    GDP: "G D P"
+    km: "kilometres"
+
+visuals:
+  footage_providers: [pexels, pixabay]        # real licensed footage — the main visual source
+  image_providers: [openai_image, gemini_image]  # AI stills, used only when no footage is found
+  clips_per_entry: 2
+  intro_clips: 2
+  data_card_share: 0.25            # share of each entry's time spent on the original data card
+  min_footage_share: 0.7           # private/publish runs STOP if fewer entries than this have real footage
+  min_unique_assets: 12
+  grade: "eq=contrast=1.06:saturation=1.08:brightness=-0.02,vignette=PI/5"   # consistent cinematic look
+
+video:
+  width: 1080
+  height: 1920
+  fps: 30
+  crf: 20
+  preset: veryfast
+  loudness_lufs: -14
+  music_volume: 0.18
+  transition_sec: 0.35
+
+ai:
+  llm_provider_order: [openai, gemini]
+  openai_model: gpt-4.1-mini
+  openai_research_model: gpt-4.1
+  gemini_model: gemini-2.5-flash
+  temperature: 0.6

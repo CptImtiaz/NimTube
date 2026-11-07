@@ -1,0 +1,90 @@
+{
+ "response": {
+  "candidates": [
+   {
+    "title": "Top 10 Largest Moons in the Solar System",
+    "niche": "science",
+    "origin": "trend",
+    "trend_keyword": "europa clipper",
+    "ranking_type": "factual",
+    "metric": "mean diameter",
+    "unit": "km",
+    "authoritative_sources": "NASA",
+    "scores": {
+     "freshness": 7,
+     "popularity": 8,
+     "international_interest": 9,
+     "audience_appeal": 8,
+     "ranking_potential": 10,
+     "research_availability": 10,
+     "visual_potential": 9,
+     "policy_safety": 10
+    },
+    "risk_notes": "none"
+   },
+   {
+    "title": "Top 10 Richest People Ranked by Religion",
+    "niche": "business",
+    "origin": "evergreen",
+    "trend_keyword": null,
+    "ranking_type": "factual",
+    "metric": "net worth",
+    "unit": "USD",
+    "authoritative_sources": "Forbes",
+    "scores": {
+     "freshness": 5,
+     "popularity": 7,
+     "international_interest": 7,
+     "audience_appeal": 6,
+     "ranking_potential": 7,
+     "research_availability": 5,
+     "visual_potential": 5,
+     "policy_safety": 3
+    },
+    "risk_notes": "sensitive trait"
+   },
+   {
+    "title": "Top 10 Fastest Land Animals",
+    "niche": "animals",
+    "origin": "evergreen",
+    "trend_keyword": null,
+    "ranking_type": "factual",
+    "metric": "top speed",
+    "unit": "km/h",
+    "authoritative_sources": "peer-reviewed",
+    "scores": {
+     "freshness": 4,
+     "popularity": 7,
+     "international_interest": 8,
+     "audience_appeal": 8,
+     "ranking_potential": 9,
+     "research_availability": 7,
+     "visual_potential": 9,
+     "policy_safety": 10
+    },
+    "risk_notes": ""
+   },
+   {
+    "title": "Top 10 Viral Dances This Week",
+    "niche": "entertainment",
+    "origin": "trend",
+    "trend_keyword": "not a real trend",
+    "ranking_type": "editorial",
+    "metric": "",
+    "unit": "",
+    "authoritative_sources": "",
+    "scores": {
+     "freshness": 10,
+     "popularity": 9,
+     "international_interest": 6,
+     "audience_appeal": 8,
+     "ranking_potential": 7,
+     "research_availability": 6,
+     "visual_potential": 8,
+     "policy_safety": 9
+    },
+    "risk_notes": ""
+   }
+  ]
+ }
+}

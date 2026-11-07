@@ -1,0 +1,61 @@
+# Approved media/voice providers and the licence facts the copyright engine records for their output.
+# REVIEW THESE TERMS YOURSELF before monetising — terms change. "commercial_use: true" means the
+# provider's published terms permit commercial use of generated/downloaded output at the time of writing.
+# Any source NOT listed here is rejected by the copyright engine.
+
+media_sources:
+  original_graphics:
+    licence_name: "Original work (generated locally by GLOBAL TOP 10 AI)"
+    licence_url: ""
+    commercial_use: true
+    attribution_required: false
+    modifications_allowed: true
+    synthetic: false
+    notes: "Infographics, number cards and title cards drawn by this software."
+
+  openai_image:
+    licence_name: "OpenAI Services Agreement / Terms of Use — output assigned to user"
+    licence_url: "https://openai.com/policies/terms-of-use/"
+    commercial_use: true
+    attribution_required: false
+    modifications_allowed: true
+    synthetic: true
+    notes: "AI-generated. Do not prompt for real people, logos or copyrighted characters."
+
+  gemini_image:
+    licence_name: "Gemini API Additional Terms of Service"
+    licence_url: "https://ai.google.dev/gemini-api/terms"
+    commercial_use: true
+    attribution_required: false
+    modifications_allowed: true
+    synthetic: true
+    notes: "AI-generated; output carries SynthID watermark. Use paid tier for commercial use."
+
+  pexels:
+    licence_name: "Pexels License"
+    licence_url: "https://www.pexels.com/license/"
+    commercial_use: true
+    attribution_required: false
+    modifications_allowed: true
+    synthetic: false
+    notes: "Not allowed: identifiable people in a bad light, selling unaltered copies, implying endorsement."
+
+  pixabay:
+    licence_name: "Pixabay Content License"
+    licence_url: "https://pixabay.com/service/license-summary/"
+    commercial_use: true
+    attribution_required: false
+    modifications_allowed: true
+    synthetic: false
+    notes: "Not allowed: selling unaltered copies, portraying identifiable people offensively, implying endorsement, trademarks/brands."
+
+music_sources:
+  # Music is checked separately. Every track in assets/music/ must be listed in assets/music/manifest.yaml
+  # with its licence; unlisted tracks are never used.
+  allowed_licences: ["CC0-1.0", "Pixabay Content License", "YouTube Audio Library", "Original", "Purchased licence"]
+
+voice_sources:
+  openai:     {commercial_use: true,  synthetic: true, licence_url: "https://openai.com/policies/usage-policies/", notes: "Must disclose the voice is AI-generated."}
+  elevenlabs: {commercial_use: true,  synthetic: true, licence_url: "https://elevenlabs.io/terms-of-use", notes: "Commercial use requires a paid plan."}
+  edge:       {commercial_use: false, synthetic: true, licence_url: "https://github.com/rany2/edge-tts", notes: "Unofficial access to Microsoft Read Aloud; no published commercial licence. Testing only."}
+  espeak:     {commercial_use: true,  synthetic: true, licence_url: "https://github.com/espeak-ng/espeak-ng", notes: "GPLv3 engine, offline. Robotic — for tests only."}

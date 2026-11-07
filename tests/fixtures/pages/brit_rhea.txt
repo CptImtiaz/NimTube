@@ -1,0 +1,3 @@
+TEST FIXTURE PAGE (offline). Encyclopedia entry.
+The mean diameter of Rhea is about 1,527 km, according to measurements from spacecraft missions.
+Further details on discovery history.

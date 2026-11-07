@@ -1,0 +1,23 @@
+# Rules the ranking engine and validator enforce.
+general:
+  entries: 10
+  require_single_metric: true        # all 10 entries measured with the same metric & unit
+  require_monotonic_values: true     # factual rankings must be sorted by the metric
+  max_value_age_years: 5             # statistics older than this must be flagged in the script ("as of 2021")
+  allowed_ranking_types: [factual, editorial]
+
+# Guidance injected into the ranking prompt for common topic families. Never mix incompatible measures.
+metric_guidance:
+  countries_economy: "Use ONE of: nominal GDP (USD), GDP per capita (USD), GDP PPP. Name the source (IMF WEO / World Bank) and year."
+  animals_size: "Use ONE of: maximum recorded length (m) or typical adult mass (kg). Do not mix length and mass."
+  buildings: "Use architectural height (m) per CTBUH unless stated."
+  games_popularity: "Use ONE defined metric: lifetime units sold, peak concurrent players, or monthly active players, with date."
+  expensive_objects: "Use documented auction sale price (USD, nominal, with sale year) — not estimates."
+  space: "Use mean diameter (km) or mass (kg) from NASA/JPL."
+  movies: "Use worldwide box office gross (USD, nominal) from a named tracker, with date."
+  editorial: "If no objective metric exists, the ranking is EDITORIAL: state the criteria and say 'our ranking'."
+
+forbidden_topic_patterns:
+  - "most dangerous (people|ethnic|religion)"
+  - "ugliest"
+  - "worst (countries|people) to"

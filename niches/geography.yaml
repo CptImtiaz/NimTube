@@ -1,0 +1,13 @@
+name: geography
+label: Geography & Countries
+mood: travel, cinematic
+visual_style: cinematic documentary, dramatic lighting, high detail, no text, no logos,
+  no real people
+music_mood: cinematic
+evergreen_topics:
+- Top 10 largest countries by area
+- Top 10 most populous countries
+- Top 10 tallest mountains in the world
+- Top 10 largest deserts in the world
+- Top 10 smallest countries by area
+- Top 10 largest islands in the world

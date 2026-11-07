@@ -1,0 +1,3 @@
+TEST FIXTURE PAGE (offline). the Moon overview.
+The Moon has a mean diameter of 3,475 kilometers (2,159 miles), making it one of the large moons of Earth.
+More text about orbit and surface features follows here for realism. 

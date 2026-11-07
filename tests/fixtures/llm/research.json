@@ -1,0 +1,328 @@
+{
+ "response": {
+  "methodology": "Mean diameter in kilometres from NASA planetary fact sheets, cross-checked with Britannica.",
+  "sort": "desc",
+  "entries": [
+   {
+    "name": "Ganymede",
+    "value": 5268,
+    "unit": "km",
+    "as_of": "2024",
+    "evidence": [
+     {
+      "url": "https://science.nasa.gov/jupiter/moons/ganymede/",
+      "publisher": "NASA Science",
+      "published": null,
+      "quote": "Ganymede has a mean diameter of 5,268 kilometers (3,273 miles), making it one of the large moons of Jupiter.",
+      "claim": "Ganymede mean diameter 5,268 km"
+     },
+     {
+      "url": "https://www.britannica.com/place/ganymede-satellite",
+      "publisher": "Britannica",
+      "published": null,
+      "quote": "The mean diameter of Ganymede is about 5,268 km, according to measurements from spacecraft missions.",
+      "claim": "Ganymede mean diameter about 5,268 km"
+     }
+    ],
+    "notes": ""
+   },
+   {
+    "name": "Titan",
+    "value": 5150,
+    "unit": "km",
+    "as_of": "2024",
+    "evidence": [
+     {
+      "url": "https://science.nasa.gov/saturn/moons/titan/",
+      "publisher": "NASA Science",
+      "published": null,
+      "quote": "Titan has a mean diameter of 5,150 kilometers (3,200 miles), making it one of the large moons of Saturn.",
+      "claim": "Titan mean diameter 5,150 km"
+     },
+     {
+      "url": "https://www.britannica.com/place/titan-satellite",
+      "publisher": "Britannica",
+      "published": null,
+      "quote": "The mean diameter of Titan is about 5,150 km, according to measurements from spacecraft missions.",
+      "claim": "Titan mean diameter about 5,150 km"
+     }
+    ],
+    "notes": ""
+   },
+   {
+    "name": "Callisto",
+    "value": 4821,
+    "unit": "km",
+    "as_of": "2024",
+    "evidence": [
+     {
+      "url": "https://science.nasa.gov/jupiter/moons/callisto/",
+      "publisher": "NASA Science",
+      "published": null,
+      "quote": "Callisto has a mean diameter of 4,821 kilometers (2,996 miles), making it one of the large moons of Jupiter.",
+      "claim": "Callisto mean diameter 4,821 km"
+     },
+     {
+      "url": "https://www.britannica.com/place/callisto-satellite",
+      "publisher": "Britannica",
+      "published": null,
+      "quote": "The mean diameter of Callisto is about 4,821 km, according to measurements from spacecraft missions.",
+      "claim": "Callisto mean diameter about 4,821 km"
+     }
+    ],
+    "notes": ""
+   },
+   {
+    "name": "Io",
+    "value": 3643,
+    "unit": "km",
+    "as_of": "2024",
+    "evidence": [
+     {
+      "url": "https://science.nasa.gov/jupiter/moons/io/",
+      "publisher": "NASA Science",
+      "published": null,
+      "quote": "Io has a mean diameter of 3,643 kilometers (2,263 miles), making it one of the large moons of Jupiter.",
+      "claim": "Io mean diameter 3,643 km"
+     },
+     {
+      "url": "https://www.britannica.com/place/io-satellite",
+      "publisher": "Britannica",
+      "published": null,
+      "quote": "The mean diameter of Io is about 3,643 km, according to measurements from spacecraft missions.",
+      "claim": "Io mean diameter about 3,643 km"
+     }
+    ],
+    "notes": ""
+   },
+   {
+    "name": "The Moon",
+    "value": 3475,
+    "unit": "km",
+    "as_of": "2024",
+    "evidence": [
+     {
+      "url": "https://science.nasa.gov/earth/moons/moon/",
+      "publisher": "NASA Science",
+      "published": null,
+      "quote": "The Moon has a mean diameter of 3,475 kilometers (2,159 miles), making it one of the large moons of Earth.",
+      "claim": "the Moon mean diameter 3,475 km"
+     },
+     {
+      "url": "https://www.britannica.com/place/moon-satellite",
+      "publisher": "Britannica",
+      "published": null,
+      "quote": "The mean diameter of the Moon is about 3,475 km, according to measurements from spacecraft missions.",
+      "claim": "the Moon mean diameter about 3,475 km"
+     }
+    ],
+    "notes": ""
+   },
+   {
+    "name": "Europa",
+    "value": 3122,
+    "unit": "km",
+    "as_of": "2024",
+    "evidence": [
+     {
+      "url": "https://science.nasa.gov/jupiter/moons/europa/",
+      "publisher": "NASA Science",
+      "published": null,
+      "quote": "Europa has a mean diameter of 3,122 kilometers (1,940 miles), making it one of the large moons of Jupiter.",
+      "claim": "Europa mean diameter 3,122 km"
+     },
+     {
+      "url": "https://www.britannica.com/place/europa-satellite",
+      "publisher": "Britannica",
+      "published": null,
+      "quote": "The mean diameter of Europa is about 3,122 km, according to measurements from spacecraft missions.",
+      "claim": "Europa mean diameter about 3,122 km"
+     }
+    ],
+    "notes": ""
+   },
+   {
+    "name": "Triton",
+    "value": 2707,
+    "unit": "km",
+    "as_of": "2024",
+    "evidence": [
+     {
+      "url": "https://science.nasa.gov/neptune/moons/triton/",
+      "publisher": "NASA Science",
+      "published": null,
+      "quote": "Triton has a mean diameter of 2,707 kilometers (1,680 miles), making it one of the large moons of Neptune.",
+      "claim": "Triton mean diameter 2,707 km"
+     },
+     {
+      "url": "https://www.britannica.com/place/triton-satellite",
+      "publisher": "Britannica",
+      "published": null,
+      "quote": "The mean diameter of Triton is about 2,707 km, according to measurements from spacecraft missions.",
+      "claim": "Triton mean diameter about 2,707 km"
+     }
+    ],
+    "notes": ""
+   },
+   {
+    "name": "Titania",
+    "value": 1578,
+    "unit": "km",
+    "as_of": "2024",
+    "evidence": [
+     {
+      "url": "https://science.nasa.gov/uranus/moons/titania/",
+      "publisher": "NASA Science",
+      "published": null,
+      "quote": "Titania has a mean diameter of 1,578 kilometers (980 miles), making it one of the large moons of Uranus.",
+      "claim": "Titania mean diameter 1,578 km"
+     },
+     {
+      "url": "https://www.britannica.com/place/titania-satellite",
+      "publisher": "Britannica",
+      "published": null,
+      "quote": "The mean diameter of Titania is about 1,578 km, according to measurements from spacecraft missions.",
+      "claim": "Titania mean diameter about 1,578 km"
+     }
+    ],
+    "notes": ""
+   },
+   {
+    "name": "Rhea",
+    "value": 1527,
+    "unit": "km",
+    "as_of": "2024",
+    "evidence": [
+     {
+      "url": "https://science.nasa.gov/saturn/moons/rhea/",
+      "publisher": "NASA Science",
+      "published": null,
+      "quote": "Rhea has a mean diameter of 1,527 kilometers (949 miles), making it one of the large moons of Saturn.",
+      "claim": "Rhea mean diameter 1,527 km"
+     },
+     {
+      "url": "https://www.britannica.com/place/rhea-satellite",
+      "publisher": "Britannica",
+      "published": null,
+      "quote": "The mean diameter of Rhea is about 1,527 km, according to measurements from spacecraft missions.",
+      "claim": "Rhea mean diameter about 1,527 km"
+     }
+    ],
+    "notes": ""
+   },
+   {
+    "name": "Oberon",
+    "value": 1523,
+    "unit": "km",
+    "as_of": "2024",
+    "evidence": [
+     {
+      "url": "https://science.nasa.gov/uranus/moons/oberon/",
+      "publisher": "NASA Science",
+      "published": null,
+      "quote": "Oberon has a mean diameter of 1,523 kilometers (946 miles), making it one of the large moons of Uranus.",
+      "claim": "Oberon mean diameter 1,523 km"
+     },
+     {
+      "url": "https://www.britannica.com/place/oberon-satellite",
+      "publisher": "Britannica",
+      "published": null,
+      "quote": "The mean diameter of Oberon is about 1,523 km, according to measurements from spacecraft missions.",
+      "claim": "Oberon mean diameter about 1,523 km"
+     }
+    ],
+    "notes": ""
+   },
+   {
+    "name": "Iapetus",
+    "value": 1469,
+    "unit": "km",
+    "as_of": "2024",
+    "evidence": [
+     {
+      "url": "https://science.nasa.gov/saturn/moons/iapetus/",
+      "publisher": "NASA Science",
+      "published": null,
+      "quote": "Iapetus has a mean diameter of 1,900 kilometers, the largest of all.",
+      "claim": "wrong"
+     }
+    ],
+    "notes": ""
+   },
+   {
+    "name": "Charon",
+    "value": 1212,
+    "unit": "km",
+    "as_of": "2024",
+    "evidence": [
+     {
+      "url": "https://science.nasa.gov/pluto/moons/charon/",
+      "publisher": "NASA Science",
+      "published": null,
+      "quote": "Charon has a mean diameter of 1,212 kilometers (753 miles), making it one of the large moons of Pluto.",
+      "claim": "Charon mean diameter 1,212 km"
+     },
+     {
+      "url": "https://www.britannica.com/place/charon-satellite",
+      "publisher": "Britannica",
+      "published": null,
+      "quote": "The mean diameter of Charon is about 1,212 km, according to measurements from spacecraft missions.",
+      "claim": "Charon mean diameter about 1,212 km"
+     }
+    ],
+    "notes": ""
+   }
+  ],
+  "missing_information": "none"
+ },
+ "citations": [
+  {
+   "url": "https://science.nasa.gov/jupiter/moons/ganymede/",
+   "title": ""
+  },
+  {
+   "url": "https://science.nasa.gov/saturn/moons/titan/",
+   "title": ""
+  },
+  {
+   "url": "https://science.nasa.gov/jupiter/moons/callisto/",
+   "title": ""
+  },
+  {
+   "url": "https://science.nasa.gov/jupiter/moons/io/",
+   "title": ""
+  },
+  {
+   "url": "https://science.nasa.gov/earth/moons/moon/",
+   "title": ""
+  },
+  {
+   "url": "https://science.nasa.gov/jupiter/moons/europa/",
+   "title": ""
+  },
+  {
+   "url": "https://science.nasa.gov/neptune/moons/triton/",
+   "title": ""
+  },
+  {
+   "url": "https://science.nasa.gov/uranus/moons/titania/",
+   "title": ""
+  },
+  {
+   "url": "https://science.nasa.gov/saturn/moons/rhea/",
+   "title": ""
+  },
+  {
+   "url": "https://science.nasa.gov/uranus/moons/oberon/",
+   "title": ""
+  },
+  {
+   "url": "https://science.nasa.gov/saturn/moons/iapetus/",
+   "title": ""
+  },
+  {
+   "url": "https://science.nasa.gov/pluto/moons/charon/",
+   "title": ""
+  }
+ ]
+}

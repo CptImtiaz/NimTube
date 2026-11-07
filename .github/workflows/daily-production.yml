@@ -1,0 +1,106 @@
+name: Daily production
+
+# Production runs on RAILWAY (cron service). This workflow is a manual alternative only —
+# to use GitHub Actions instead, add back:  schedule: [{cron: "0 0 * * *"}]   (08:00 Malaysia time)
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run | test (no upload) | private (upload private) | publish (uses settings.publishing)"
+        type: choice
+        options: [private, test, dry-run, publish]
+        default: private
+      topic:
+        description: "Optional: force a topic, e.g. 'Top 10 Largest Lakes in the World'"
+        required: false
+        default: ""
+
+permissions:
+  contents: write              # needed only to push the encrypted state branch
+
+concurrency:
+  group: gt10-bot-state        # shared with analytics.yml: never two writers of the state at once
+  cancel-in-progress: false
+
+jobs:
+  produce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      PRODUCTION_MODE: ${{ inputs.mode || vars.PRODUCTION_MODE || 'private' }}
+      FORCED_TOPIC: ${{ inputs.topic }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+      YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+      YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+      ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+      REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+      STATE_PASSPHRASE: ${{ secrets.STATE_PASSPHRASE }}
+      NOTIFY_WEBHOOK_URL: ${{ secrets.NOTIFY_WEBHOOK_URL }}
+      OUTPUT_DIR: ${{ github.workspace }}/output
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install FFmpeg, fonts, offline TTS
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg fonts-dejavu-core espeak-ng
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore encrypted state
+        run: python scripts/state.py pull
+
+      - name: Check configuration (names only, never values)
+        run: python -m app check-config
+
+      - name: Produce video (with one automatic resume on transient failure)
+        id: run
+        run: |
+          set +e
+          # inputs are passed as quoted env vars (no eval) to avoid shell injection
+          if [ -n "$FORCED_TOPIC" ]; then
+            python -m app run --mode "$PRODUCTION_MODE" --resume-latest --topic "$FORCED_TOPIC"
+          else
+            python -m app run --mode "$PRODUCTION_MODE" --resume-latest
+          fi
+          code=$?
+          if [ $code -ne 0 ] && [ $code -ne 3 ]; then
+            echo "::warning::run failed with code $code — resuming once in 60s"
+            sleep 60
+            python -m app run --mode "$PRODUCTION_MODE" --resume-latest
+            code=$?
+          fi
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit $code
+
+      - name: Save encrypted state
+        if: always()
+        run: python scripts/state.py push
+
+      - name: Upload artifacts (video, report, metadata)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-${{ github.run_id }}
+          path: |
+            output/**/report.md
+            output/**/report.json
+            output/**/ERROR_REPORT.md
+            output/**/render/final.mp4
+            output/**/render/captions.srt
+            output/**/thumbnail.jpg
+          retention-days: 14
+          if-no-files-found: warn
