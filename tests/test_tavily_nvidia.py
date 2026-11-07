@@ -7,6 +7,7 @@ from app.research import engine, tavily
 class Resp:
     def __init__(self, data, status=200):
         self._d, self.status_code, self.text = data, status, json.dumps(data)
+        self.headers = {"Content-Type": "application/json"}
 
     def json(self):
         return self._d
@@ -22,6 +23,8 @@ def test_nvidia_provider_strips_reasoning_and_is_used_as_fallback(settings, monk
         seen["url"], seen["model"] = url, kw["json"]["model"]
         return Resp({"choices": [{"message": {"content": "<think>let me think</think>{\"ok\": 1}"}}], "usage": {}})
     monkeypatch.setattr(llm_mod.http, "request", fake)
+    import requests
+    monkeypatch.setattr(requests, "post", lambda url, **kw: fake("POST", url, **kw))
     settings.mock = False
     L = llm_mod.LLM(settings)
     assert [p.name for p in L.providers] == ["nvidia"]
@@ -66,26 +69,41 @@ def test_queries_cover_list_and_metric():
     assert len(qs) == 3 and any("list of" in q for q in qs) and any("units sold" in q for q in qs)
 
 
-def test_nvidia_skips_model_not_deployed_for_account(monkeypatch, settings):
+def test_nvidia_skips_unavailable_and_stalled_models(monkeypatch, settings):
+    import requests
     from app import llm as L
     monkeypatch.setenv("NVIDIA_API_KEY", "x")
     calls = []
 
     class R:
-        def __init__(self, code, body):
+        def __init__(self, code, body=None, stream_lines=None, stall=False):
             self.status_code, self._b, self.text = code, body, str(body)
+            self.headers = {"Content-Type": "text/event-stream" if stream_lines is not None else "application/json"}
+            self._lines, self._stall = stream_lines or [], stall
 
         def json(self):
             return self._b
 
-    def fake(method, url, **k):
-        if url.endswith("/models"):
-            return R(200, {"data": [{"id": "nvidia/nemotron-3-super-120b-a12b"}, {"id": "nvidia/nemotron-3-nano-30b-a3b"}]})
-        calls.append(k["json"]["model"])
-        if k["json"]["model"] == "nvidia/nemotron-3-super-120b-a12b":
+        def iter_lines(self, decode_unicode=True):
+            if self._stall:
+                raise requests.exceptions.ReadTimeout("stalled")
+            yield from self._lines
+
+    def fake_get(method, url, **k):
+        return R(200, {"data": [{"id": "deepseek-ai/deepseek-v4.1-flash"}, {"id": "nvidia/nemotron-3-super-120b-a12b"},
+                                {"id": "nvidia/nemotron-3-nano-30b-a3b"}]})
+
+    def fake_post(url, json=None, **k):
+        calls.append(json["model"])
+        if json["model"] == "deepseek-ai/deepseek-v4.1-flash":
+            return R(200, stream_lines=[], stall=True)               # too slow -> stalled stream
+        if json["model"] == "nvidia/nemotron-3-super-120b-a12b":
             return R(404, {"detail": "Function not found for account"})
-        return R(200, {"choices": [{"message": {"content": "{\"ok\": 1}"}}], "usage": {}})
-    monkeypatch.setattr(L.http, "request", fake)
+        return R(200, stream_lines=['data: {"choices":[{"delta":{"content":"{\\"ok\\": "}}]}',
+                                    'data: {"choices":[{"delta":{"content":"1}"}}]}', "data: [DONE]"])
+    monkeypatch.setattr(L.http, "request", fake_get)
+    monkeypatch.setattr(requests, "post", fake_post)
     p = L.OpenAICompatProvider(settings, None, "nvidia")
-    assert p.complete("s", "p") == "{\"ok\": 1}"
-    assert calls == ["nvidia/nemotron-3-super-120b-a12b", "nvidia/nemotron-3-nano-30b-a3b"]
+    assert p.complete("s", "p") == '{"ok": 1}'
+    assert calls == ["deepseek-ai/deepseek-v4.1-flash", "nvidia/nemotron-3-super-120b-a12b",
+                     "nvidia/nemotron-3-nano-30b-a3b"]

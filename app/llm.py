@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from pathlib import Path
 
 from . import http
@@ -312,6 +313,10 @@ class GeminiProvider:
         return self._text(data), urls
 
 
+class _ModelUnavailable(Exception):
+    pass
+
+
 class OpenAICompatProvider:
     """Any OpenAI-compatible chat endpoint. Default: NVIDIA API catalog (Nemotron).
     NOTE: NVIDIA's free build.nvidia.com endpoints are for trial/testing only, not production use.
@@ -360,25 +365,69 @@ class OpenAICompatProvider:
         return self._model
 
     def complete(self, system: str, prompt: str) -> str:
-        r = http.request("POST", f"{self.base}/chat/completions", timeout=300, retries=4,
-                         headers={"Authorization": f"Bearer {self.key}"},
-                         json={"model": self.model, "temperature": self.temperature, "max_tokens": 8000,
-                               "messages": [{"role": "system", "content": system + "\nReply with one JSON object only."},
-                                            {"role": "user", "content": prompt}]})
-        if r.status_code == 404 and self._wanted == "auto" and self._model:
-            # listed in /models but not deployed for this account -> try the next model in the preference list
-            logger.warning(f"{self.name} model {self._model} not available for this key; trying the next one")
-            self._dead.add(self._model)
-            self._model = None
-            if len(self._dead) < 6:
+        model = self.model
+        body = {"model": model, "temperature": self.temperature, "max_tokens": 8000, "stream": True,
+                "messages": [{"role": "system", "content": system + "\nReply with one JSON object only."},
+                             {"role": "user", "content": prompt}]}
+        try:
+            text, usage = self._stream(body)
+        except _ModelUnavailable as e:
+            if self._wanted == "auto" and len(self._dead) < 6:
+                # not deployed for this key (404) or too slow (stalled stream) -> next model in the preference list
+                logger.warning(f"{self.name} model {model} {e}; trying the next one")
+                self._dead.add(model)
+                self._model = None
                 return self.complete(system, prompt)
-        if r.status_code >= 400:
-            raise LLMError(f"{self.name} {r.status_code}: {r.text[:300]}")
-        data = r.json()
+            raise LLMError(f"{self.name} {model}: {e}")
         if self.db:
-            self.db.add_usage(self.name, (data.get("usage") or {}).get("total_tokens", 0), 0)
-        text = data["choices"][0]["message"].get("content") or ""
+            self.db.add_usage(self.name, usage, 0)
         return re.sub(r"<think>.*?</think>", "", text, flags=re.S)       # reasoning models
+
+    def _stream(self, body: dict) -> tuple[str, int]:
+        """Streamed chat completion. The read timeout applies between chunks, so slow-but-working reasoning
+        models finish, while a stalled model fails in ~90 s instead of 5 x 300 s. Hard cap: 10 minutes."""
+        import requests as _rq
+        t0 = time.time()
+        for attempt in range(2):
+            try:
+                r = _rq.post(f"{self.base}/chat/completions", json=body, stream=True, timeout=(15, 90),
+                             headers={"Authorization": f"Bearer {self.key}", "Accept": "text/event-stream"})
+            except _rq.RequestException as e:
+                if attempt == 0:
+                    time.sleep(3)
+                    continue
+                raise _ModelUnavailable(f"unreachable ({str(e)[:120]})")
+            if r.status_code == 404:
+                raise _ModelUnavailable("not available for this key (404)")
+            if r.status_code in (429, 500, 502, 503, 504) and attempt == 0:
+                time.sleep(5)
+                continue
+            if r.status_code >= 400:
+                raise LLMError(f"{self.name} {r.status_code}: {r.text[:300]}")
+            if "text/event-stream" not in r.headers.get("Content-Type", ""):
+                data = r.json()                                   # server ignored stream=True
+                return (data["choices"][0]["message"].get("content") or ""), (data.get("usage") or {}).get("total_tokens", 0)
+            parts, usage = [], 0
+            try:
+                for line in r.iter_lines(decode_unicode=True):
+                    if time.time() - t0 > 600:
+                        raise _ModelUnavailable("too slow (over 10 minutes)")
+                    if not line or not line.startswith("data:"):
+                        continue
+                    chunk = line[5:].strip()
+                    if chunk == "[DONE]":
+                        break
+                    d = json.loads(chunk)
+                    usage = (d.get("usage") or {}).get("total_tokens", usage)
+                    for ch in d.get("choices", []):
+                        parts.append((ch.get("delta") or {}).get("content") or "")
+            except _rq.RequestException as e:
+                raise _ModelUnavailable(f"stream stalled ({str(e)[:100]})")
+            text = "".join(parts)
+            if not text.strip():
+                raise _ModelUnavailable("returned an empty answer")
+            return text, usage
+        raise _ModelUnavailable("busy (repeated 429/5xx)")
 
     def research(self, system: str, prompt: str):
         raise LLMError(f"{self.name} has no web search (use Tavily research)")

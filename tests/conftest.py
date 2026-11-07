@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pytest
 
+os.environ["GT10_NO_DOTENV"] = "1"      # never load a developer .env into the test run
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 

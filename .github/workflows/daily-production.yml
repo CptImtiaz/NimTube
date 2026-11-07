@@ -113,6 +113,18 @@ jobs:
         if: always()
         run: python scripts/state.py push
 
+      - name: Publish preview video (Releases -> preview-<run>, deleted after 2 days by the publish job)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          f=$(ls output/*/render/final.mp4 2>/dev/null | head -1)
+          [ -z "$f" ] && { echo "no video produced"; exit 0; }
+          tag="queue-preview-${{ github.run_id }}"
+          gh release create "$tag" "$f#preview.mp4" --prerelease --title "Preview video (run ${{ github.run_id }})" \
+            --notes "Test render. Not uploaded to YouTube." || true
+          echo "Preview: https://github.com/${{ github.repository }}/releases/tag/$tag"
+
       - name: Upload artifacts (video, report, metadata)
         if: always()
         uses: actions/upload-artifact@v4
