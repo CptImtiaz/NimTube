@@ -17,6 +17,8 @@ def test_nvidia_provider_strips_reasoning_and_is_used_as_fallback(settings, monk
     seen = {}
 
     def fake(method, url, **kw):
+        if url.endswith("/models"):
+            return Resp({"data": [{"id": "nvidia/nemotron-3.5-lightning-30b-a3b"}, {"id": "meta/llama-3.1-8b"}]})
         seen["url"], seen["model"] = url, kw["json"]["model"]
         return Resp({"choices": [{"message": {"content": "<think>let me think</think>{\"ok\": 1}"}}], "usage": {}})
     monkeypatch.setattr(llm_mod.http, "request", fake)
@@ -25,7 +27,7 @@ def test_nvidia_provider_strips_reasoning_and_is_used_as_fallback(settings, monk
     assert [p.name for p in L.providers] == ["nvidia"]
     assert L.complete_json("t", "s", "p") == {"ok": 1}
     assert seen["url"] == "https://integrate.api.nvidia.com/v1/chat/completions"
-    assert "nemotron" in seen["model"]
+    assert seen["model"] == "nvidia/nemotron-3.5-lightning-30b-a3b"      # best available from preference list
 
 
 def test_tavily_research_verifies_quotes_against_extracted_pages(settings, db, monkeypatch):

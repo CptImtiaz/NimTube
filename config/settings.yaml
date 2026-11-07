@@ -106,8 +106,15 @@ video:
 ai:
   # first provider with an API key is used; the rest are automatic fallbacks.
   # nvidia (free build.nvidia.com key) is TRIAL/TESTING ONLY per NVIDIA's terms — keep it last for published videos.
-  llm_provider_order: [gemini, anthropic, openai, deepseek, openrouter, nvidia]
-  nvidia_model: nvidia/llama-3.3-nemotron-super-49b-v1.5
+  # NOTE: the free build.nvidia.com key is TRIAL/TESTING ONLY per NVIDIA's terms (production needs NVIDIA AI Enterprise
+  # or a paid partner endpoint). Chosen by the channel owner as default; Gemini and the others remain fallbacks.
+  llm_provider_order: [nvidia, gemini, anthropic, openai, deepseek, openrouter]
+  nvidia_model: auto                # auto = first available from the preference list below (or set NVIDIA_MODEL)
+  nvidia_model_preference:
+    - nvidia/nemotron-3-super-120b-a12b
+    - nvidia/nemotron-3.5-lightning-30b-a3b
+    - nvidia/nemotron-3-nano-30b-a3b
+    - nvidia/llama-3.3-nemotron-super-49b-v1.5
   deepseek_model: deepseek-chat
   openrouter_model: "deepseek/deepseek-v4-flash:free"
   anthropic_model: claude-sonnet-5-5

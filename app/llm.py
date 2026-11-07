@@ -330,13 +330,33 @@ class OpenAICompatProvider:
         self.name = name
         self.key = env(cfg[0])
         self.base = cfg[1]
-        self.model = env(cfg[2]) or cfg[3]
+        self._wanted = env(cfg[2]) or cfg[3]
+        self._model: str | None = None
+        self.prefer = s.get("ai.nvidia_model_preference", []) if name == "nvidia" else []
         self.temperature = s.get("ai.temperature", 0.6)
         self.db = db
 
     @property
     def available(self):
         return bool(self.key)
+
+    @property
+    def model(self) -> str:
+        """'auto' (NVIDIA): first model from ai.nvidia_model_preference that this key can access."""
+        if self._model is None:
+            if self._wanted != "auto":
+                self._model = self._wanted
+            else:
+                r = http.request("GET", f"{self.base}/models", timeout=30, headers={"Authorization": f"Bearer {self.key}"})
+                ids = [m.get("id", "") for m in (r.json().get("data", []) if r.status_code < 400 else [])]
+                pick = next((m for m in self.prefer if m in ids), None)
+                if not pick:
+                    nem = sorted(i for i in ids if "nemotron" in i and not any(x in i for x in ("embed", "rerank", "safety",
+                                                                                           "reward", "vl", "omni", "parse")))
+                    pick = nem[-1] if nem else (self.prefer[-1] if self.prefer else "")
+                self._model = pick
+            logger.info(f"{self.name} model: {self._model}")
+        return self._model
 
     def complete(self, system: str, prompt: str) -> str:
         r = http.request("POST", f"{self.base}/chat/completions", timeout=300, retries=4,
