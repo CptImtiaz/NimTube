@@ -64,3 +64,28 @@ def test_tavily_research_verifies_quotes_against_extracted_pages(settings, db, m
 def test_queries_cover_list_and_metric():
     qs = tavily.build_queries({"title": "Top 10 Best-Selling Video Games of All Time", "metric": "units sold"}, 3)
     assert len(qs) == 3 and any("list of" in q for q in qs) and any("units sold" in q for q in qs)
+
+
+def test_nvidia_skips_model_not_deployed_for_account(monkeypatch, settings):
+    from app import llm as L
+    monkeypatch.setenv("NVIDIA_API_KEY", "x")
+    calls = []
+
+    class R:
+        def __init__(self, code, body):
+            self.status_code, self._b, self.text = code, body, str(body)
+
+        def json(self):
+            return self._b
+
+    def fake(method, url, **k):
+        if url.endswith("/models"):
+            return R(200, {"data": [{"id": "nvidia/nemotron-3-super-120b-a12b"}, {"id": "nvidia/nemotron-3-nano-30b-a3b"}]})
+        calls.append(k["json"]["model"])
+        if k["json"]["model"] == "nvidia/nemotron-3-super-120b-a12b":
+            return R(404, {"detail": "Function not found for account"})
+        return R(200, {"choices": [{"message": {"content": "{\"ok\": 1}"}}], "usage": {}})
+    monkeypatch.setattr(L.http, "request", fake)
+    p = L.OpenAICompatProvider(settings, None, "nvidia")
+    assert p.complete("s", "p") == "{\"ok\": 1}"
+    assert calls == ["nvidia/nemotron-3-super-120b-a12b", "nvidia/nemotron-3-nano-30b-a3b"]

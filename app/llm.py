@@ -332,6 +332,8 @@ class OpenAICompatProvider:
         self.base = cfg[1]
         self._wanted = env(cfg[2]) or cfg[3]
         self._model: str | None = None
+        self._candidates: list[str] = []
+        self._dead: set[str] = set()
         self.prefer = s.get("ai.nvidia_model_preference", []) if name == "nvidia" else []
         self.temperature = s.get("ai.temperature", 0.6)
         self.db = db
@@ -349,12 +351,11 @@ class OpenAICompatProvider:
             else:
                 r = http.request("GET", f"{self.base}/models", timeout=30, headers={"Authorization": f"Bearer {self.key}"})
                 ids = [m.get("id", "") for m in (r.json().get("data", []) if r.status_code < 400 else [])]
-                pick = next((m for m in self.prefer if m in ids), None)
-                if not pick:
-                    nem = sorted(i for i in ids if "nemotron" in i and not any(x in i for x in ("embed", "rerank", "safety",
-                                                                                           "reward", "vl", "omni", "parse")))
-                    pick = nem[-1] if nem else (self.prefer[-1] if self.prefer else "")
-                self._model = pick
+                nem = sorted((i for i in ids if "nemotron" in i and not any(x in i for x in (
+                    "embed", "rerank", "safety", "reward", "vl", "omni", "parse"))), reverse=True)
+                cands = [m for m in self.prefer if m in ids] + [m for m in nem if m not in self.prefer]
+                self._candidates = [m for m in (cands or self.prefer) if m not in self._dead]
+                self._model = self._candidates[0] if self._candidates else ""
             logger.info(f"{self.name} model: {self._model}")
         return self._model
 
@@ -364,6 +365,13 @@ class OpenAICompatProvider:
                          json={"model": self.model, "temperature": self.temperature, "max_tokens": 8000,
                                "messages": [{"role": "system", "content": system + "\nReply with one JSON object only."},
                                             {"role": "user", "content": prompt}]})
+        if r.status_code == 404 and self._wanted == "auto" and self._model:
+            # listed in /models but not deployed for this account -> try the next model in the preference list
+            logger.warning(f"{self.name} model {self._model} not available for this key; trying the next one")
+            self._dead.add(self._model)
+            self._model = None
+            if len(self._dead) < 6:
+                return self.complete(system, prompt)
         if r.status_code >= 400:
             raise LLMError(f"{self.name} {r.status_code}: {r.text[:300]}")
         data = r.json()
