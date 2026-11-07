@@ -28,6 +28,26 @@ def _load_yaml(path: Path) -> dict:
     return data
 
 
+def load_dotenv(path: Path | None = None) -> None:
+    """Local runs: read KEY=value lines from .env (gitignored, never committed). Real environment variables
+    and GitHub Secrets always win over the file."""
+    path = path or ROOT / ".env"
+    if not path.is_file():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        k, v = k.strip(), v.strip().strip('"').strip("'").strip("`")
+        if k and v and not os.environ.get(k):
+            os.environ[k] = v
+
+
+if not os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("GT10_NO_DOTENV"):
+    load_dotenv()
+
+
 def env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
 
