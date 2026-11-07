@@ -4,7 +4,7 @@ channel:
   language: en
 
 production:
-  videos_per_day: 1                # Gemini free tier: start with 1/night. Set 3 once you use a paid API.
+  videos_per_day: 3                # 3 videos each night, one per slot below
   target_duration_sec: 90          # narration is planned for this; allowed range below
   min_duration_sec: 60
   max_duration_sec: 180
@@ -12,7 +12,8 @@ production:
   ranking_size: 10
 
 publishing:
-  backend: zapier                  # zapier (Zapier "YouTube: Upload Video" via webhook) | youtube_api (direct OAuth)
+  backend: youtube_api             # youtube_api = YouTube's own scheduling (needs YT_CLIENT_ID/SECRET/REFRESH_TOKEN);
+                                   # falls back to the Zapier queue automatically if those secrets are missing
   # Nightly batch: 3 videos are made at 14:00 UTC (22:00 Malaysia) and each is published at one slot.
   # Slots (UTC) are chosen so each hits evening prime time in a different big audience region:
   #   17:30 UTC = 18:30 London / 19:30 Berlin / 23:00 India      -> Europe evening
@@ -25,7 +26,7 @@ publishing:
   hosting: github_release          # github_release (public repo release assets) | s3 (S3-compatible bucket)
   keep_hosted_days: 3              # hosted copies are deleted after this (YouTube keeps the video)
   link_valid_hours: 24             # only for s3 hosting
-  auto_publish: false              # false = upload private only. Set true after testing.
+  auto_publish: false              # false = upload private only. true = schedule PUBLIC at the slot times.
   visibility: private              # private | unlisted | public  (used only if auto_publish: true)
   schedule_publish_at: null        # e.g. "18:00" (channel-local time below) to use publishAt; null = immediate
   channel_timezone: "Asia/Kuala_Lumpur"
@@ -85,7 +86,7 @@ voice:
     km: "kilometres"
 
 visuals:
-  footage_providers: [pexels, pixabay, coverr, nasa]          # nasa = space/astronomy topics only, no key
+  footage_providers: [pixabay, coverr, nasa]          # nasa = space/astronomy topics only, no key
   search_image_providers: [nasa_image, openverse]   # real photos before AI images; Openverse = CC0/PD/CC-BY only
   image_providers: [openai_image, gemini_image]  # AI stills, used only when no footage is found
   clips_per_entry: 2

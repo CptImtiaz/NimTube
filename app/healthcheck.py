@@ -10,7 +10,7 @@ T = 25
 
 SECRET_VARS = ("NVIDIA_API_KEY", "GEMINI_API_KEY", "TAVILY_API_KEY", "PEXELS_API_KEY", "PIXABAY_API_KEY",
                "COVERR_API_KEY", "HF_TOKEN", "YOUTUBE_API_KEY", "ELEVENLABS_API_KEY", "REDDIT_CLIENT_ID",
-               "REDDIT_CLIENT_SECRET", "ZAPIER_UPLOAD_HOOK", "STATE_PASSPHRASE", "NASA_API_KEY")
+               "REDDIT_CLIENT_SECRET", "YT_CLIENT_ID", "YT_CLIENT_SECRET", "YT_REFRESH_TOKEN", "ZAPIER_UPLOAD_HOOK", "STATE_PASSPHRASE", "NASA_API_KEY")
 
 
 def redact(text: str) -> str:
@@ -99,6 +99,14 @@ def check_reddit(s: Settings):
     return r.ok and "access_token" in r.text, "token issued" if r.ok else _err(r)
 
 
+def check_youtube_upload(s: Settings):
+    from .youtube_upload.publisher import client
+    ch = client().channels().list(part="snippet,status", mine=True).execute().get("items", [])
+    if not ch:
+        return False, "signed in, but this Google account has no YouTube channel"
+    return True, f"can upload to channel '{ch[0]['snippet']['title']}'"
+
+
 def check_kokoro(s: Settings):
     import importlib.util
     ok = importlib.util.find_spec("kokoro") is not None
@@ -109,18 +117,15 @@ CHECKS = [  # (label, required env var or None, function, needed?)
     ("NVIDIA (DeepSeek default LLM)", "NVIDIA_API_KEY", check_nvidia, True),
     ("Gemini (backup LLM)", "GEMINI_API_KEY", check_gemini, False),
     ("Tavily (research)", "TAVILY_API_KEY", check_tavily, True),
-    ("Pexels (footage)", "PEXELS_API_KEY", check_pexels, False),
     ("Pixabay (footage)", "PIXABAY_API_KEY", check_pixabay, False),
     ("Coverr (footage)", "COVERR_API_KEY", check_coverr, False),
     ("NASA library (footage)", None, check_nasa, False),
     ("Openverse (CC photos)", None, check_openverse, False),
     ("Hugging Face (voice model)", "HF_TOKEN", check_hf, False),
     ("Kokoro voice", None, check_kokoro, False),
-    ("YouTube Data API (trends)", "YOUTUBE_API_KEY", check_youtube, False),
-    ("ElevenLabs (premium voice)", "ELEVENLABS_API_KEY", check_elevenlabs, False),
-    ("Reddit (trends)", "REDDIT_CLIENT_ID", check_reddit, False),
+    ("YouTube upload + scheduling", "YT_REFRESH_TOKEN", check_youtube_upload, True),
 ]
-PRESENCE = [("Zapier upload webhook", "ZAPIER_UPLOAD_HOOK", True), ("State passphrase", "STATE_PASSPHRASE", True)]
+PRESENCE = [("State passphrase", "STATE_PASSPHRASE", True)]
 
 
 def run_checks(s: Settings) -> tuple[list[tuple[str, str, str]], bool]:
@@ -145,7 +150,7 @@ def run_checks(s: Settings) -> tuple[list[tuple[str, str, str]], bool]:
         ok_all &= bool(env(var)) or not needed
     footage = [r for r in rows if "(footage)" in r[0] and r[1] == "OK" and "NASA" not in r[0]]
     if not footage:
-        rows.append(("Footage overall", "FAIL", "no working Pexels/Pixabay/Coverr key — videos would use cards only"))
+        rows.append(("Footage overall", "FAIL", "no working Pixabay/Coverr key — videos would use cards only"))
         ok_all = False
     return rows, ok_all
 

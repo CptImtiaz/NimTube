@@ -38,7 +38,7 @@ def _meta(key):
 
 
 def test_single_daily_video_uses_priority_slot(settings):
-    assert settings.get("production.videos_per_day") == 1
+    settings.raw["production"]["videos_per_day"] = 1
     assert queue.upcoming_slots(settings, datetime(2026, 11, 8, 14, 0, tzinfo=timezone.utc)) == ["2026-11-08T23:30:00Z"]
 
 
@@ -101,3 +101,39 @@ def test_nightly_queues_one_video_per_slot(settings, monkeypatch, capsys):
     rows = DB(load_settings("queue", mock=True).db_path).query("SELECT slot_utc, status FROM publish_queue")
     assert rows and all(r["status"] == "queued" for r in rows)
     assert {r["slot_utc"] for r in rows} <= {"2026-11-08T17:30:00Z", "2026-11-08T23:30:00Z"}
+
+
+def test_upload_uses_native_youtube_schedule(settings, db, tmp_path):
+    from app.youtube_upload import publisher as pub
+    video = tmp_path / "v.mp4"
+    video.write_bytes(b"x" * 1000)
+    key = pub.idempotency_key("job1", video)
+    meta = {"title": "T", "description": f"d ref: {key}", "tags": []}
+    sent = {}
+
+    class Req:
+        def next_chunk(self, num_retries=0):
+            return None, {"id": "vid123"}
+
+    class Videos:
+        def insert(self, part, body, notifySubscribers, media_body):
+            sent["body"] = body
+            return Req()
+
+    class YT:
+        def videos(self):
+            return Videos()
+    settings.raw["publishing"]["auto_publish"] = True
+    settings.raw["publishing"]["upload_thumbnail"] = False
+    res = pub.upload(settings, db, "job1", "publish", video, meta, yt=YT(), schedule_at="2026-11-09T23:30:00Z")
+    assert sent["body"]["status"]["privacyStatus"] == "private"
+    assert sent["body"]["status"]["publishAt"] == "2026-11-09T23:30:00.000Z"
+    assert res["publish_at"] == "2026-11-09T23:30:00.000Z"
+    # safety: without auto_publish the video stays private and unscheduled
+    settings.raw["publishing"]["auto_publish"] = False
+    video2 = tmp_path / "v2.mp4"
+    video2.write_bytes(b"y" * 1000)
+    key2 = pub.idempotency_key("job2", video2)
+    pub.upload(settings, db, "job2", "publish", video2, {"title": "T", "description": f"ref: {key2}", "tags": []},
+               yt=YT(), schedule_at="2026-11-09T23:30:00Z")
+    assert "publishAt" not in sent["body"]["status"]

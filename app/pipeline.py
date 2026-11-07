@@ -225,9 +225,27 @@ def run(s: Settings, resume_job: str | None = None, forced_topic: str | None = N
                     slot = data.get("slot_utc") or slot_utc
                     if not slot:
                         raise PipelineStop("queue mode needs a publish slot")
-                    save("upload", timed("upload", lambda: enqueue(s, db, job_id, video, meta, slot)))
+                    backend = env("UPLOAD_BACKEND") or s.get("publishing.backend", "zapier")
+                    from .youtube_upload.publisher import upload, youtube_configured
+                    if backend == "youtube_api" and youtube_configured():
+                        # YouTube's own scheduling: upload tonight as private + publishAt = slot
+                        def yt_schedule():
+                            res = upload(s, db, job_id, "publish", video, meta, Path(render["srt"]), schedule_at=slot)
+                            db.execute("INSERT OR IGNORE INTO publish_queue VALUES (?,?,?,?,?,?,?,?,?,?)",
+                                       (idempotency_key(job_id, video), job_id, slot,
+                                        res.get("url", ""), "", json.dumps({"title": meta["title"]}),
+                                        "scheduled_on_youtube", time.time(), time.time(), None))
+                            return {**res, "slot_utc": slot}
+                        save("upload", timed("upload", yt_schedule))
+                    else:
+                        if backend == "youtube_api":
+                            logger.warning("backend youtube_api but YT_CLIENT_ID/SECRET/REFRESH_TOKEN missing -> "
+                                           "falling back to the Zapier queue")
+                        save("upload", timed("upload", lambda: enqueue(s, db, job_id, video, meta, slot)))
                 result["upload"] = data["upload"]
-                status = f"queued for {data['upload'].get('slot_utc')}"
+                up = data["upload"]
+                status = (f"scheduled on YouTube for {up.get('publish_at') or up.get('slot_utc')}"
+                          if up.get("youtube_id") else f"queued for {up.get('slot_utc')}")
             elif s.mode in ("private", "publish"):
                 if not done("upload"):
                     backend = env("UPLOAD_BACKEND") or s.get("publishing.backend", "zapier")

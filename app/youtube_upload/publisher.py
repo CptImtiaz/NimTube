@@ -92,8 +92,14 @@ def decide_privacy(s: Settings, mode: str) -> tuple[str, str | None]:
     return vis, None
 
 
+def youtube_configured() -> bool:
+    return all(env(k) for k in ("YT_CLIENT_ID", "YT_CLIENT_SECRET", "YT_REFRESH_TOKEN"))
+
+
 def upload(s: Settings, db: DB, job_id: str, mode: str, video: Path, meta: dict, srt: Path | None = None,
-           yt=None) -> dict:
+           yt=None, schedule_at: str | None = None) -> dict:
+    """schedule_at: ISO UTC time -> upload now as private with YouTube's own publishAt (native scheduling).
+    Only honoured when publishing.auto_publish is true; otherwise the video stays private (safe default)."""
     key = idempotency_key(job_id, video)
     if key not in meta["description"]:
         raise PublishError("description must contain the idempotency reference before upload")
@@ -111,6 +117,12 @@ def upload(s: Settings, db: DB, job_id: str, mode: str, video: Path, meta: dict,
             return {"youtube_id": existing, "status": "recovered_existing", "privacy": row["privacy"]}
 
     privacy, publish_at = decide_privacy(s, mode)
+    if schedule_at:
+        if s.get("publishing.auto_publish", False):
+            privacy, publish_at = "private", schedule_at.replace(":00Z", ":00.000Z")
+        else:
+            logger.warning("auto_publish is false -> uploading PRIVATE without a publish time")
+            privacy, publish_at = "private", None
     now = time.time()
     db.execute("INSERT INTO uploads (idempotency_key, job_id, video_sha256, status, privacy, publish_at, created_at, "
                "updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(idempotency_key) DO UPDATE SET status='uploading', "
