@@ -33,10 +33,21 @@ def main(argv=None):
     sub.add_parser("analytics")
     sub.add_parser("jobs")
     sub.add_parser("check-config")
+    sub.add_parser("check-apis", help="make one tiny live request to every configured API")
     a = p.parse_args(argv)
 
+    if a.cmd == "check-apis":
+        from .healthcheck import report, run_checks
+        rows, ok = run_checks(load_settings("test"))
+        print(report(rows))
+        import os
+        if os.environ.get("GITHUB_STEP_SUMMARY"):
+            with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
+                f.write("## API health check\n\n" + report(rows) + "\n")
+        return 0 if ok else 1
+
     if a.cmd == "check-config":
-        keys = ["ANTHROPIC_API_KEY", "ZAPIER_UPLOAD_HOOK", "S3_BUCKET", "S3_ENDPOINT", "OPENAI_API_KEY", "GEMINI_API_KEY", "YOUTUBE_API_KEY", "ELEVENLABS_API_KEY", "ELEVENLABS_VOICE_ID", "PEXELS_API_KEY", "PIXABAY_API_KEY", "COVERR_API_KEY", "HF_TOKEN", "TAVILY_API_KEY", "NVIDIA_API_KEY", "DEEPSEEK_API_KEY", "OPENROUTER_API_KEY",
+        keys = ["ANTHROPIC_API_KEY", "ZAPIER_UPLOAD_HOOK", "S3_BUCKET", "S3_ENDPOINT", "OPENAI_API_KEY", "GEMINI_API_KEY", "YOUTUBE_API_KEY", "ELEVENLABS_API_KEY", "ELEVENLABS_VOICE_ID", "PEXELS_API_KEY", "PIXABAY_API_KEY", "COVERR_API_KEY", "HF_TOKEN", "NASA_API_KEY", "TAVILY_API_KEY", "NVIDIA_API_KEY", "DEEPSEEK_API_KEY", "OPENROUTER_API_KEY",
                 "YT_CLIENT_ID", "YT_CLIENT_SECRET", "YT_REFRESH_TOKEN", "REDDIT_CLIENT_ID", "STATE_PASSPHRASE",
                 "NOTIFY_WEBHOOK_URL"]
         for k in keys:
