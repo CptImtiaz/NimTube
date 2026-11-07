@@ -123,9 +123,9 @@ CHECKS = [  # (label, required env var or None, function, needed?)
     ("Openverse (CC photos)", None, check_openverse, False),
     ("Hugging Face (voice model)", "HF_TOKEN", check_hf, False),
     ("Kokoro voice", None, check_kokoro, False),
-    ("YouTube upload + scheduling", "YT_REFRESH_TOKEN", check_youtube_upload, True),
+    ("YouTube sign-in (analytics)", "YT_REFRESH_TOKEN", check_youtube_upload, False),
 ]
-PRESENCE = [("State passphrase", "STATE_PASSPHRASE", True)]
+PRESENCE = [("Zapier upload webhook", "ZAPIER_UPLOAD_HOOK", True), ("State passphrase", "STATE_PASSPHRASE", True)]
 
 
 def run_checks(s: Settings) -> tuple[list[tuple[str, str, str]], bool]:

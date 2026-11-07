@@ -12,8 +12,8 @@ production:
   ranking_size: 10
 
 publishing:
-  backend: youtube_api             # youtube_api = YouTube's own scheduling (needs YT_CLIENT_ID/SECRET/REFRESH_TOKEN);
-                                   # falls back to the Zapier queue automatically if those secrets are missing
+  backend: zapier                  # zapier = bot sends each video to Zapier at its slot time (public right away)
+                                   # youtube_api = YouTube's own scheduling (needs YT_* secrets + passed API audit)
   # Nightly batch: 3 videos are made at 14:00 UTC (22:00 Malaysia) and each is published at one slot.
   # Slots (UTC) are chosen so each hits evening prime time in a different big audience region:
   #   17:30 UTC = 18:30 London / 19:30 Berlin / 23:00 India      -> Europe evening
