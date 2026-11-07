@@ -200,6 +200,8 @@ class GeminiProvider:
         self.key = env("GEMINI_API_KEY")
         self.wanted = env("GEMINI_MODEL") or s.get("ai.gemini_model", "auto")
         self._model: str | None = None
+        # research may use a different model (e.g. one whose free tier includes Google Search grounding)
+        self.research_model = env("GEMINI_RESEARCH_MODEL") or s.get("ai.gemini_research_model") or ""
         self.temperature = s.get("ai.temperature", 0.6)
         self.min_interval = float(s.get("ai.gemini_min_seconds_between_calls", 6))   # free tier: low RPM
         self._last = 0.0
@@ -243,16 +245,36 @@ class GeminiProvider:
             logger.info(f"gemini model: {self._model}")
         return self._model
 
-    def _call(self, body: dict) -> dict:
+    @staticmethod
+    def _explain_error(r) -> str:
+        try:
+            err = r.json().get("error", {})
+        except Exception:
+            return r.text[:400]
+        msg = err.get("message", "")[:200]
+        extra = []
+        for d in err.get("details", []) or []:
+            for v in d.get("violations", []) or []:
+                extra.append(f"{v.get('quotaMetric', '')} {v.get('quotaId', '')} limit={v.get('quotaValue', '?')}")
+            if d.get("retryDelay"):
+                extra.append(f"retry after {d['retryDelay']}")
+        return f"{err.get('status', '')} {msg} | {'; '.join(extra)}"[:900]
+
+    def _call(self, body: dict, model: str | None = None) -> dict:
         import time as _t
         wait = self._last + self.min_interval - _t.monotonic()
         if wait > 0:
             _t.sleep(wait)
-        url = f"{self.BASE}/models/{self.model}:generateContent"
+        use = model or self.model
+        url = f"{self.BASE}/models/{use}:generateContent"
         r = http.request("POST", url, json=body, timeout=240, headers={"x-goog-api-key": self.key}, retries=5)
         self._last = _t.monotonic()
+        if r.status_code in (404, 400) and model and model != self.model and "not found" in r.text.lower():
+            logger.warning(f"gemini research model {model} is not available — using {self.model}")
+            self.research_model = ""
+            return self._call(body)
         if r.status_code >= 400:
-            raise LLMError(f"gemini {r.status_code}: {r.text[:400]}")
+            raise LLMError(f"gemini {r.status_code} ({use}): {self._explain_error(r)}")
         data = r.json()
         u = data.get("usageMetadata") or {}
         p = PRICES.get(self.model, (0, 0))
@@ -283,7 +305,7 @@ class GeminiProvider:
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "tools": [{"google_search": {}}],
             "generationConfig": {"temperature": 0.2},
-        })
+        }, model=self.research_model or None)
         meta = (data.get("candidates") or [{}])[0].get("groundingMetadata", {}) or {}
         urls = [{"url": c["web"]["uri"], "title": c["web"].get("title", "")}
                 for c in meta.get("groundingChunks", []) if c.get("web", {}).get("uri")]

@@ -142,3 +142,34 @@ def test_gemini_discovers_model_and_skips_thought_parts(settings, monkeypatch):
     assert L.providers[0].name == "gemini"
     assert L.complete_json("t", "s", "p") == {"ok": True}
     assert "gemini-3.8-flash:generateContent" in calls[-1]
+
+
+def test_gemini_research_model_with_fallback(settings, monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "AIza" + "y" * 35)
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-3.8-flash")
+    calls = []
+
+    def fake(method, url, **kw):
+        calls.append(url)
+        if "gemini-2.5-flash" in url:
+            r = Resp({"error": {"code": 404, "message": "models/gemini-2.5-flash is not found"}}, 404)
+            r.text = "models/gemini-2.5-flash is not found for API version v1beta"
+            return r
+        return Resp({"candidates": [{"content": {"parts": [{"text": '{"entries": []}'}]},
+                                     "groundingMetadata": {}}], "usageMetadata": {}})
+    monkeypatch.setattr(llm_mod.http, "request", fake)
+    settings.mock = False
+    settings.raw["ai"]["gemini_min_seconds_between_calls"] = 0
+    data, _ = llm_mod.LLM(settings).research_json("research", "s", "p")
+    assert data == {"entries": []}
+    assert "gemini-2.5-flash" in calls[0] and "gemini-3.8-flash" in calls[1]
+
+
+def test_gemini_quota_error_is_explained():
+    from app.llm import GeminiProvider
+    r = Resp({"error": {"code": 429, "status": "RESOURCE_EXHAUSTED", "message": "You exceeded your current quota",
+                        "details": [{"violations": [{"quotaMetric": "generativelanguage.googleapis.com/search_grounding",
+                                                     "quotaId": "SearchGroundingPerDay", "quotaValue": "0"}]},
+                                    {"retryDelay": "41s"}]}}, 429)
+    msg = GeminiProvider._explain_error(r)
+    assert "search_grounding" in msg and "limit=0" in msg and "41s" in msg

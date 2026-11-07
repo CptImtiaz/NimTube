@@ -108,5 +108,6 @@ ai:
   openai_model: gpt-4.1-mini
   openai_research_model: gpt-4.1
   gemini_model: auto                # auto = newest stable Flash model your key can use (or set an exact ID / GEMINI_MODEL)
+  gemini_research_model: gemini-2.5-flash   # its free tier included Google Search grounding; falls back to gemini_model if retired
   gemini_min_seconds_between_calls: 6   # free tier has a low requests-per-minute limit
   temperature: 0.6
