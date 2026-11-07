@@ -54,6 +54,10 @@ topics:
   excluded_keywords: [election, shooting, war crimes, suicide, terror, abortion]  # never make videos on these
 
 research:
+  mode: auto                       # auto = Tavily search if TAVILY_API_KEY is set, else the AI's own web search
+  tavily_queries: 3
+  tavily_results_per_query: 6
+  max_source_chars: 12000          # per page sent to the AI
   min_independent_sources: 2       # distinct domains per topic
   min_verified_facts_per_entry: 1
   max_source_fetch_kb: 1500
@@ -100,7 +104,12 @@ video:
   transition_sec: 0.35
 
 ai:
-  llm_provider_order: [gemini, anthropic, openai]   # first one with an API key is used; others are fallbacks
+  # first provider with an API key is used; the rest are automatic fallbacks.
+  # nvidia (free build.nvidia.com key) is TRIAL/TESTING ONLY per NVIDIA's terms — keep it last for published videos.
+  llm_provider_order: [gemini, anthropic, openai, deepseek, openrouter, nvidia]
+  nvidia_model: nvidia/llama-3.3-nemotron-super-49b-v1.5
+  deepseek_model: deepseek-chat
+  openrouter_model: "deepseek/deepseek-v4-flash:free"
   anthropic_model: claude-sonnet-5-5
   anthropic_research_model: claude-sonnet-5-5
   anthropic_max_searches: 8

@@ -312,6 +312,50 @@ class GeminiProvider:
         return self._text(data), urls
 
 
+class OpenAICompatProvider:
+    """Any OpenAI-compatible chat endpoint. Default: NVIDIA API catalog (Nemotron).
+    NOTE: NVIDIA's free build.nvidia.com endpoints are for trial/testing only, not production use.
+    No built-in web search — research then uses the Tavily search path."""
+    has_search = False
+
+    def __init__(self, s: Settings, db=None, name: str = "nvidia"):
+        cfg = {
+            "nvidia": ("NVIDIA_API_KEY", "https://integrate.api.nvidia.com/v1", "NVIDIA_MODEL",
+                       s.get("ai.nvidia_model", "nvidia/llama-3.3-nemotron-super-49b-v1.5")),
+            "deepseek": ("DEEPSEEK_API_KEY", "https://api.deepseek.com/v1", "DEEPSEEK_MODEL",
+                         s.get("ai.deepseek_model", "deepseek-chat")),
+            "openrouter": ("OPENROUTER_API_KEY", "https://openrouter.ai/api/v1", "OPENROUTER_MODEL",
+                           s.get("ai.openrouter_model", "deepseek/deepseek-v4-flash:free")),
+        }[name]
+        self.name = name
+        self.key = env(cfg[0])
+        self.base = cfg[1]
+        self.model = env(cfg[2]) or cfg[3]
+        self.temperature = s.get("ai.temperature", 0.6)
+        self.db = db
+
+    @property
+    def available(self):
+        return bool(self.key)
+
+    def complete(self, system: str, prompt: str) -> str:
+        r = http.request("POST", f"{self.base}/chat/completions", timeout=300, retries=4,
+                         headers={"Authorization": f"Bearer {self.key}"},
+                         json={"model": self.model, "temperature": self.temperature, "max_tokens": 8000,
+                               "messages": [{"role": "system", "content": system + "\nReply with one JSON object only."},
+                                            {"role": "user", "content": prompt}]})
+        if r.status_code >= 400:
+            raise LLMError(f"{self.name} {r.status_code}: {r.text[:300]}")
+        data = r.json()
+        if self.db:
+            self.db.add_usage(self.name, (data.get("usage") or {}).get("total_tokens", 0), 0)
+        text = data["choices"][0]["message"].get("content") or ""
+        return re.sub(r"<think>.*?</think>", "", text, flags=re.S)       # reasoning models
+
+    def research(self, system: str, prompt: str):
+        raise LLMError(f"{self.name} has no web search (use Tavily research)")
+
+
 class MockProvider:
     """Answers from tests/fixtures/llm/<task>.json — never used in production modes unless mock=True."""
     name = "mock"
@@ -341,8 +385,10 @@ class LLM:
             self.providers = [MockProvider()]
         else:
             all_p = {"anthropic": AnthropicProvider(s, db), "openai": OpenAIProvider(s, db),
-                     "gemini": GeminiProvider(s, db)}
-            order = s.get("ai.llm_provider_order", ["anthropic", "openai", "gemini"])
+                     "gemini": GeminiProvider(s, db), "nvidia": OpenAICompatProvider(s, db, "nvidia"),
+                     "deepseek": OpenAICompatProvider(s, db, "deepseek"),
+                     "openrouter": OpenAICompatProvider(s, db, "openrouter")}
+            order = s.get("ai.llm_provider_order", ["gemini", "anthropic", "openai", "deepseek", "openrouter", "nvidia"])
             self.providers = [all_p[n] for n in order if n in all_p and all_p[n].available]
         if not self.providers:
             raise LLMError("No LLM provider configured. Set ANTHROPIC_API_KEY (or OPENAI_API_KEY / GEMINI_API_KEY).")

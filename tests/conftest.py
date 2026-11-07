@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT))
 def settings(tmp_path, monkeypatch):
     monkeypatch.setenv("DATA_DIR", str(tmp_path / "db"))
     monkeypatch.setenv("OUTPUT_DIR", str(tmp_path / "out"))
-    for k in ("ANTHROPIC_API_KEY", "ZAPIER_UPLOAD_HOOK", "UPLOAD_BACKEND", "OPENAI_API_KEY", "GEMINI_API_KEY", "YOUTUBE_API_KEY", "ELEVENLABS_API_KEY", "PEXELS_API_KEY", "PIXABAY_API_KEY"):
+    for k in ("ANTHROPIC_API_KEY", "ZAPIER_UPLOAD_HOOK", "UPLOAD_BACKEND", "OPENAI_API_KEY", "GEMINI_API_KEY", "YOUTUBE_API_KEY", "ELEVENLABS_API_KEY", "PEXELS_API_KEY", "PIXABAY_API_KEY", "TAVILY_API_KEY", "NVIDIA_API_KEY", "DEEPSEEK_API_KEY", "OPENROUTER_API_KEY"):
         monkeypatch.delenv(k, raising=False)
     from app.config import load_settings
     return load_settings(mode="test", mock=True)
