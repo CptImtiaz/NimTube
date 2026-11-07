@@ -14,12 +14,14 @@ class Resp:
 
 
 def test_upcoming_slots_after_nightly_run(settings):
+    settings.raw["production"]["videos_per_day"] = 3
     run_at = datetime(2026, 11, 8, 14, 0, tzinfo=timezone.utc)          # 22:00 Malaysia
     assert queue.upcoming_slots(settings, run_at) == [
         "2026-11-08T17:30:00Z", "2026-11-08T23:30:00Z", "2026-11-09T11:30:00Z"]
 
 
 def test_slots_need_lead_time(settings):
+    settings.raw["production"]["videos_per_day"] = 3
     late = datetime(2026, 11, 8, 17, 0, tzinfo=timezone.utc)            # too close to 17:30
     assert queue.upcoming_slots(settings, late)[0] == "2026-11-08T23:30:00Z"
 
@@ -35,7 +37,13 @@ def _meta(key):
     return {"title": "Top 10 X #shorts", "description": f"d\nref: {key}", "tags": ["x"], "thumbnail": None}
 
 
+def test_single_daily_video_uses_priority_slot(settings):
+    assert settings.get("production.videos_per_day") == 1
+    assert queue.upcoming_slots(settings, datetime(2026, 11, 8, 14, 0, tzinfo=timezone.utc)) == ["2026-11-08T23:30:00Z"]
+
+
 def test_enqueue_then_publish_only_when_due_and_once(settings, db, video, monkeypatch):
+    settings.raw["production"]["videos_per_day"] = 3
     monkeypatch.setenv("ZAPIER_UPLOAD_HOOK", "https://hooks.zapier.com/hooks/catch/1/x/")
     key = idempotency_key("j1", video)
     hoster = lambda p, name, ct: f"https://github.com/CptImtiaz/NimTube/releases/download/queue-1/{name}"

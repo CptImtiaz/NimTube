@@ -29,7 +29,7 @@ def upcoming_slots(s: Settings, now: datetime | None = None, count: int | None =
     """Next `count` slot datetimes (ISO, UTC) at least `min_lead_min` minutes from now."""
     now = now or datetime.now(timezone.utc)
     count = count or int(s.get("production.videos_per_day", 3))
-    times = s.get("publishing.slots_utc", ["17:30", "23:30", "11:30"])
+    times = list(s.get("publishing.slots_utc", ["23:30", "17:30", "11:30"]))[:max(count, 1)]   # priority order
     out = []
     day = now.date()
     while len(out) < count:

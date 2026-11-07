@@ -4,7 +4,7 @@ channel:
   language: en
 
 production:
-  videos_per_day: 3
+  videos_per_day: 1                # Gemini free tier: start with 1/night. Set 3 once you use a paid API.
   target_duration_sec: 90          # narration is planned for this; allowed range below
   min_duration_sec: 60
   max_duration_sec: 180
@@ -19,7 +19,8 @@ publishing:
   #   23:30 UTC = 18:30 New York / 15:30 Los Angeles              -> Americas evening
   #   11:30 UTC = 17:00 India / 19:30 Malaysia / 20:30 Japan      -> Asia evening
   # If you change these, also change the cron lines in .github/workflows/publish.yml.
-  slots_utc: ["17:30", "23:30", "11:30"]
+  # Listed in PRIORITY order: with videos_per_day: 1 only the first slot is used (Americas = largest English audience).
+  slots_utc: ["23:30", "17:30", "11:30"]
   slot_send_early_min: 25          # a publish run may send a video up to this many minutes before its slot
   hosting: github_release          # github_release (public repo release assets) | s3 (S3-compatible bucket)
   keep_hosted_days: 3              # hosted copies are deleted after this (YouTube keeps the video)
@@ -99,12 +100,13 @@ video:
   transition_sec: 0.35
 
 ai:
-  llm_provider_order: [anthropic, openai, gemini]   # first one with an API key is used; others are fallbacks
+  llm_provider_order: [gemini, anthropic, openai]   # first one with an API key is used; others are fallbacks
   anthropic_model: claude-sonnet-5-5
   anthropic_research_model: claude-sonnet-5-5
   anthropic_max_searches: 8
   anthropic_prices_per_mtok: null    # e.g. [3.0, 15.0] — fill in from the Claude pricing page for cost reports
   openai_model: gpt-4.1-mini
   openai_research_model: gpt-4.1
-  gemini_model: gemini-2.5-flash
+  gemini_model: auto                # auto = newest stable Flash model your key can use (or set an exact ID / GEMINI_MODEL)
+  gemini_min_seconds_between_calls: 6   # free tier has a low requests-per-minute limit
   temperature: 0.6

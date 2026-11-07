@@ -112,3 +112,33 @@ def test_presigned_url_is_generated_offline(monkeypatch):
     url = client.generate_presigned_url("get_object", Params={"Bucket": bucket, "Key": "videos/j/final.mp4"},
                                         ExpiresIn=3600)
     assert url.startswith("https://gt10-videos-abc.t3.storageapi.dev/videos/j/final.mp4") and "X-Amz-Signature" in url
+
+
+def test_gemini_auto_picks_newest_stable_flash():
+    from app.llm import GeminiProvider
+    names = ["models/gemini-2.5-flash", "models/gemini-3.5-flash-lite", "models/gemini-3.6-flash",
+             "models/gemini-3.8-flash", "models/gemini-3.8-flash-image", "models/gemini-3.8-pro",
+             "models/text-embedding-005"]
+    assert GeminiProvider.pick_model(names) == "gemini-3.8-flash"
+    assert GeminiProvider.pick_model(names, "gemini-3.6-flash") == "gemini-3.6-flash"
+    assert GeminiProvider.pick_model(["models/gemini-4-flash-preview-x"]) == "gemini-4-flash-preview-x"
+
+
+def test_gemini_discovers_model_and_skips_thought_parts(settings, monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "AIza" + "x" * 35)
+    calls = []
+
+    def fake(method, url, **kw):
+        calls.append(url)
+        if url.endswith("/models"):
+            return Resp({"models": [{"name": "models/gemini-3.6-flash", "supportedGenerationMethods": ["generateContent"]},
+                                    {"name": "models/gemini-3.8-flash", "supportedGenerationMethods": ["generateContent"]}]})
+        return Resp({"candidates": [{"content": {"parts": [{"text": "thinking...", "thought": True},
+                                                          {"text": '{"ok": true}'}]}}], "usageMetadata": {}})
+    monkeypatch.setattr(llm_mod.http, "request", fake)
+    settings.mock = False
+    settings.raw["ai"]["gemini_min_seconds_between_calls"] = 0
+    L = llm_mod.LLM(settings)
+    assert L.providers[0].name == "gemini"
+    assert L.complete_json("t", "s", "p") == {"ok": True}
+    assert "gemini-3.8-flash:generateContent" in calls[-1]

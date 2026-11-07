@@ -77,8 +77,12 @@ Secrets are only exposed as environment variables; logs pass through a redaction
 ```
 
 1. **Secrets** — repo → Settings → Secrets and variables → Actions → *New repository secret*:
-   `ANTHROPIC_API_KEY`, `ZAPIER_UPLOAD_HOOK`, `YOUTUBE_API_KEY`, `PEXELS_API_KEY`, `PIXABAY_API_KEY`,
-   `STATE_PASSPHRASE` (+ optional `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `NOTIFY_WEBHOOK_URL`).
+   `GEMINI_API_KEY` (main AI, free tier — aistudio.google.com → Get API key), `ZAPIER_UPLOAD_HOOK`,
+   `YOUTUBE_API_KEY`, `PEXELS_API_KEY`, `PIXABAY_API_KEY`, `STATE_PASSPHRASE`
+   (+ optional `ANTHROPIC_API_KEY` as paid backup, `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `NOTIFY_WEBHOOK_URL`,
+   `GEMINI_MODEL` to force an exact model ID instead of auto-pick).
+   On the Gemini free tier the bot makes **1 video per night** (Americas slot, 23:30 UTC). After switching to a paid
+   API, set `production.videos_per_day: 3` in `config/settings.yaml`.
 2. **Permissions** — Settings → Actions → General → *Workflow permissions* → **Read and write**.
 3. **Zap** — see `docs/ZAPIER_SETUP.md`.
 4. **Test** — Actions → *Single video (manual test)* → mode `test` → download the artifact and watch it.

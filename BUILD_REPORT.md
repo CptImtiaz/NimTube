@@ -4,6 +4,14 @@ Build date: 2026-11-07 · Python 3.12/3.13 · ≈3,400 lines of application code
 This report states plainly what works, what was tested, and what was **not** possible to test in the build
 environment.
 
+## Update — Gemini free tier as main AI (2026-11-07)
+
+* Provider order is now Gemini → Claude → OpenAI. The Gemini model is auto-selected from the key's ListModels result
+  (newest stable Flash), because older IDs such as gemini-2.5 were retired; `GEMINI_MODEL` forces an exact ID.
+  Calls are paced (6 s apart) for the free tier's low per-minute limit; thinking parts are ignored.
+* `videos_per_day: 1` for the free tier; slots are in priority order, so 1 video goes to the Americas slot.
+* Tests: **54 passed**. Not live-tested with a real Gemini key.
+
 ## Update — GitHub Actions nightly batch, 3 videos/day (2026-11-07)
 
 * Railway removed. **`nightly.yml`** (14:00 UTC = 22:00 MYT) produces one video per open slot (3), each with a

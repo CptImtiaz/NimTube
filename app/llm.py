@@ -194,19 +194,63 @@ class AnthropicProvider:
 class GeminiProvider:
     name = "gemini"
 
+    BASE = "https://generativelanguage.googleapis.com/v1beta"
+
     def __init__(self, s: Settings, db=None):
         self.key = env("GEMINI_API_KEY")
-        self.model = s.get("ai.gemini_model", "gemini-2.5-flash")
+        self.wanted = env("GEMINI_MODEL") or s.get("ai.gemini_model", "auto")
+        self._model: str | None = None
         self.temperature = s.get("ai.temperature", 0.6)
+        self.min_interval = float(s.get("ai.gemini_min_seconds_between_calls", 6))   # free tier: low RPM
+        self._last = 0.0
         self.db = db
 
     @property
     def available(self):
         return bool(self.key)
 
+    @staticmethod
+    def pick_model(names: list[str], wanted: str = "auto") -> str:
+        """Choose a model ID from the account's ListModels result. 'auto' = newest stable Flash model."""
+        ids = [n.split("/", 1)[-1] for n in names]
+        if wanted and wanted != "auto" and wanted in ids:
+            return wanted
+        def version(mid: str) -> tuple:
+            m = re.search(r"gemini-(\d+(?:\.\d+)?)", mid)
+            return (float(m.group(1)) if m else 0.0,)
+        flash = [i for i in ids if re.fullmatch(r"gemini-\d+(\.\d+)?-flash", i)]          # stable, non-lite
+        if not flash:
+            flash = [i for i in ids if "flash" in i and not any(x in i for x in ("image", "tts", "audio", "live",
+                                                                                  "embedding", "thinking"))]
+        if not flash:
+            raise LLMError(f"no Gemini Flash model available to this key (saw {ids[:8]})")
+        return sorted(flash, key=version)[-1]
+
+    @property
+    def model(self) -> str:
+        """An exact model ID from settings/GEMINI_MODEL is used as-is; 'auto' asks Google which models exist."""
+        if self._model is None:
+            if self.wanted and self.wanted != "auto":
+                self._model = self.wanted
+            else:
+                r = http.request("GET", f"{self.BASE}/models", params={"pageSize": 200}, timeout=30,
+                                 headers={"x-goog-api-key": self.key})
+                if r.status_code >= 400:
+                    raise LLMError(f"gemini ListModels {r.status_code}: {r.text[:300]}")
+                names = [m["name"] for m in r.json().get("models", [])
+                         if "generateContent" in (m.get("supportedGenerationMethods") or [])]
+                self._model = self.pick_model(names, "auto")
+            logger.info(f"gemini model: {self._model}")
+        return self._model
+
     def _call(self, body: dict) -> dict:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
-        r = http.request("POST", url, json=body, timeout=180, headers={"x-goog-api-key": self.key})
+        import time as _t
+        wait = self._last + self.min_interval - _t.monotonic()
+        if wait > 0:
+            _t.sleep(wait)
+        url = f"{self.BASE}/models/{self.model}:generateContent"
+        r = http.request("POST", url, json=body, timeout=240, headers={"x-goog-api-key": self.key}, retries=5)
+        self._last = _t.monotonic()
         if r.status_code >= 400:
             raise LLMError(f"gemini {r.status_code}: {r.text[:400]}")
         data = r.json()
@@ -222,7 +266,8 @@ class GeminiProvider:
         cands = data.get("candidates") or []
         if not cands:
             raise LLMError(f"gemini returned no candidates: {str(data)[:300]}")
-        return "".join(p.get("text", "") for p in cands[0].get("content", {}).get("parts", []))
+        return "".join(p.get("text", "") for p in cands[0].get("content", {}).get("parts", [])
+                       if not p.get("thought"))            # skip thinking parts of newer models
 
     def complete(self, system: str, prompt: str) -> str:
         data = self._call({
