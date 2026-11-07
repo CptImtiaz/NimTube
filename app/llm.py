@@ -366,11 +366,26 @@ class OpenAICompatProvider:
 
     def complete(self, system: str, prompt: str) -> str:
         model = self.model
-        body = {"model": model, "temperature": self.temperature, "max_tokens": 8000, "stream": True,
-                "messages": [{"role": "system", "content": system + "\nReply with one JSON object only."},
-                             {"role": "user", "content": prompt}]}
+        sys_msg = system + "\nReply with one JSON object only."
+        body = {"model": model, "temperature": self.temperature, "max_tokens": 16000, "stream": True,
+                "messages": [{"role": "system", "content": sys_msg}, {"role": "user", "content": prompt}]}
+        if self.name == "nvidia":
+            # thinking models spend the whole token budget "thinking" and return no answer -> switch thinking off
+            low = model.lower()
+            if "deepseek" in low:
+                body["chat_template_kwargs"] = {"thinking": False}
+            elif "nemotron" in low or "qwen" in low:
+                body["chat_template_kwargs"] = {"enable_thinking": False}
+                body["messages"][0]["content"] = "/no_think\n" + sys_msg
         try:
-            text, usage = self._stream(body)
+            try:
+                text, usage = self._stream(body)
+            except LLMError as e:
+                if "chat_template_kwargs" in body and " 400" in str(e):     # model rejects the switch -> plain call
+                    body.pop("chat_template_kwargs")
+                    text, usage = self._stream(body)
+                else:
+                    raise
         except _ModelUnavailable as e:
             if self._wanted == "auto" and len(self._dead) < 6:
                 # not deployed for this key (404) or too slow (stalled stream) -> next model in the preference list
@@ -407,7 +422,7 @@ class OpenAICompatProvider:
             if "text/event-stream" not in r.headers.get("Content-Type", ""):
                 data = r.json()                                   # server ignored stream=True
                 return (data["choices"][0]["message"].get("content") or ""), (data.get("usage") or {}).get("total_tokens", 0)
-            parts, usage = [], 0
+            parts, thoughts, usage = [], [], 0
             try:
                 for line in r.iter_lines(decode_unicode=True):
                     if time.time() - t0 > 600:
@@ -420,12 +435,24 @@ class OpenAICompatProvider:
                     d = json.loads(chunk)
                     usage = (d.get("usage") or {}).get("total_tokens", usage)
                     for ch in d.get("choices", []):
-                        parts.append((ch.get("delta") or {}).get("content") or "")
+                        delta = ch.get("delta") or {}
+                        parts.append(delta.get("content") or "")
+                        thoughts.append(delta.get("reasoning_content") or delta.get("reasoning") or "")
             except _rq.RequestException as e:
                 raise _ModelUnavailable(f"stream stalled ({str(e)[:100]})")
             text = "".join(parts)
             if not text.strip():
-                raise _ModelUnavailable("returned an empty answer")
+                # some models put the final JSON at the end of their reasoning stream
+                thought = "".join(thoughts)
+                j, tries = thought.rfind("{"), 0
+                while j != -1 and tries < 40:
+                    tries += 1
+                    try:
+                        json.loads(thought[j:thought.rindex("}") + 1])
+                        return thought[j:thought.rindex("}") + 1], usage
+                    except (ValueError, json.JSONDecodeError):
+                        j = thought.rfind("{", 0, j)
+                raise _ModelUnavailable("returned an empty answer (token budget used up by thinking)")
             return text, usage
         raise _ModelUnavailable("busy (repeated 429/5xx)")
 
