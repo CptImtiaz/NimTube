@@ -135,3 +135,20 @@ def test_hook_overlay_and_banner(tmp_path):
     assert "0:00:01.60,0:00:06.00,Top10" in txt           # title waits for the teaser to finish
     b = section_ass(tmp_path / "b.ass", 5.0, [], rank=3, name="Io", banner="The top 3").read_text()
     assert ",Banner,," in b and "THE TOP 3" in b
+
+
+def test_coverr_needs_key_and_downloads(monkeypatch, settings, tmp_path):
+    with pytest.raises(P.VisualError, match="COVERR_API_KEY"):
+        P.coverr(settings, "ocean waves", tmp_path / "c")
+    monkeypatch.setenv("COVERR_API_KEY", "test")
+    seen = {}
+
+    def fake_get_json(url, params=None, headers=None, **k):
+        seen["auth"] = headers["Authorization"]
+        return {"hits": [{"id": "v1", "title": "Waves", "urls": {"mp4_download": "https://storage.example/v1"}}]}
+    monkeypatch.setattr(P.http, "get_json", fake_get_json)
+    monkeypatch.setattr(P, "_download", lambda url, out: out)
+    used = set()
+    path, creator, proof = P.coverr(settings, "ocean waves", tmp_path / "c", used)
+    assert creator == "Coverr" and "coverr:v1" in used and seen["auth"].startswith("Bearer ")
+    assert settings.providers["media_sources"]["coverr"]["commercial_use"] is True

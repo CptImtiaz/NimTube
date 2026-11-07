@@ -85,7 +85,7 @@ voice:
     km: "kilometres"
 
 visuals:
-  footage_providers: [pexels, pixabay, nasa]          # nasa = space/astronomy topics only, no key
+  footage_providers: [pexels, pixabay, coverr, nasa]          # nasa = space/astronomy topics only, no key
   search_image_providers: [nasa_image, openverse]   # real photos before AI images; Openverse = CC0/PD/CC-BY only
   image_providers: [openai_image, gemini_image]  # AI stills, used only when no footage is found
   clips_per_entry: 2
@@ -120,6 +120,7 @@ ai:
     - nvidia/nemotron-3.5-lightning-30b-a3b
     - nvidia/nemotron-3-nano-30b-a3b
     - nvidia/llama-3.3-nemotron-super-49b-v1.5
+    - deepseek-ai/deepseek-v4.1-flash          # DeepSeek V4.1 Flash on the same NVIDIA key (fallback)
   deepseek_model: deepseek-chat
   openrouter_model: "deepseek/deepseek-v4-flash:free"
   anthropic_model: claude-sonnet-5-5

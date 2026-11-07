@@ -225,6 +225,33 @@ def openverse_image(s: Settings, query: str, out: Path) -> tuple[Path, str, dict
     raise VisualError(f"openverse: no suitable CC0/PD/CC-BY image for '{query}'")
 
 
-FOOTAGE_PROVIDERS = {"pexels": pexels, "pixabay": pixabay, "nasa": nasa_video}
+def coverr(s: Settings, query: str, out: Path, used: set | None = None) -> tuple[Path, str, dict]:
+    """Coverr free stock video API (COVERR_API_KEY). Coverr licence: free for commercial use, no attribution."""
+    key = env("COVERR_API_KEY")
+    if not key:
+        raise VisualError("COVERR_API_KEY not set")
+    used = used if used is not None else set()
+    data = http.get_json("https://api.coverr.co/videos", params={"query": query[:100], "page_size": 20,
+                                                                  "urls": "true"},
+                         headers={"Authorization": f"Bearer {key}"}, timeout=30)
+    hits = data.get("hits") or []
+    hits.sort(key=lambda h: 0 if h.get("is_vertical") or str(h.get("aspect_ratio", "")).startswith("9") else 1)
+    for h in hits:
+        vid = f"coverr:{h.get('id')}"
+        urls = h.get("urls") or {}
+        link = urls.get("mp4_download") or urls.get("mp4")
+        if vid in used or not link:
+            continue
+        try:
+            path = _download(link, out)
+        except Exception:
+            continue
+        used.add(vid)
+        return path, "Coverr", {"provider": "coverr", "coverr_id": h.get("id"), "title": h.get("title", ""),
+                                "query": query}
+    raise VisualError(f"coverr: no video for '{query}'")
+
+
+FOOTAGE_PROVIDERS = {"pexels": pexels, "pixabay": pixabay, "coverr": coverr, "nasa": nasa_video}
 SEARCH_IMAGE_PROVIDERS = {"nasa_image": nasa_image, "openverse": openverse_image}   # real photos, searched by query
 IMAGE_PROVIDERS = {"openai_image": openai_image, "gemini_image": gemini_image}     # AI-generated, by prompt

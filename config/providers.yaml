@@ -49,6 +49,15 @@ media_sources:
     synthetic: false
     notes: "Not allowed: selling unaltered copies, portraying identifiable people offensively, implying endorsement, trademarks/brands."
 
+  coverr:
+    licence_name: "Coverr License (free for commercial use, no attribution required)"
+    licence_url: "https://coverr.co/license"
+    commercial_use: true
+    attribution_required: false
+    modifications_allowed: true
+    synthetic: false
+    notes: "Coverr stock footage via the official API."
+
   nasa:
     licence_name: "NASA Images and Media Usage Guidelines (generally not copyrighted)"
     licence_url: "https://www.nasa.gov/nasa-brand-center/images-and-media/"
