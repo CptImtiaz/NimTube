@@ -1,169 +1,171 @@
 {
- "response": {
-  "hook": "Some moons in our solar system are so big they would pass for planets.",
-  "intro": "These are the ten largest moons, ranked by mean diameter.",
-  "segments": [
-   {
-    "rank": 10,
-    "name": "Oberon",
-    "narration": "Number ten: Oberon, the outermost of Uranus's major moons, at 1,523 kilometres wide. A frozen, cratered world we have seen up close only once.",
-    "on_screen": "",
-    "fact_ids": [
-     0
+  "response": {
+    "hook": "Some moons in our solar system are so big they would pass for planets.",
+    "hook_text": "WAIT UNTIL YOU SEE #1",
+    "rehook": "Now the top three, and these are giants.",
+    "intro": "These are the ten largest moons, ranked by mean diameter.",
+    "segments": [
+      {
+        "rank": 10,
+        "name": "Oberon",
+        "narration": "Number ten: Oberon, the outermost of Uranus's major moons, at 1,523 kilometres wide. A frozen, cratered world we have seen up close only once.",
+        "on_screen": "",
+        "fact_ids": [
+          0
+        ],
+        "footage": [
+          "uranus planet space",
+          "icy moon surface",
+          "stars night sky"
+        ],
+        "image_prompt": "cinematic view of Oberon in space, no text"
+      },
+      {
+        "rank": 9,
+        "name": "Rhea",
+        "narration": "Number nine: Rhea. Saturn's second-largest moon edges past Oberon by just four kilometres, at 1,527.",
+        "on_screen": "",
+        "fact_ids": [
+          0
+        ],
+        "footage": [
+          "saturn rings space",
+          "cratered moon surface",
+          "space stars"
+        ],
+        "image_prompt": "cinematic view of Rhea in space, no text"
+      },
+      {
+        "rank": 8,
+        "name": "Titania",
+        "narration": "Number eight: Titania, the biggest moon of Uranus, spanning 1,578 kilometres of ice and rock.",
+        "on_screen": "",
+        "fact_ids": [
+          0
+        ],
+        "footage": [
+          "uranus planet",
+          "ice canyon",
+          "night sky stars"
+        ],
+        "image_prompt": "cinematic view of Titania in space, no text"
+      },
+      {
+        "rank": 7,
+        "name": "Triton",
+        "narration": "Number seven: Triton. Neptune's giant measures 2,707 kilometres, and it is the only large moon that orbits backwards.",
+        "on_screen": "",
+        "fact_ids": [
+          0
+        ],
+        "footage": [
+          "neptune planet blue",
+          "frozen surface ice",
+          "deep space"
+        ],
+        "image_prompt": "cinematic view of Triton in space, no text"
+      },
+      {
+        "rank": 6,
+        "name": "Europa",
+        "narration": "Number six: Europa, the icy world scientists hope may hide an ocean, 3,122 kilometres across.",
+        "on_screen": "",
+        "fact_ids": [
+          0
+        ],
+        "footage": [
+          "ice sheet cracks",
+          "frozen ocean",
+          "jupiter planet"
+        ],
+        "image_prompt": "cinematic view of Europa in space, no text"
+      },
+      {
+        "rank": 5,
+        "name": "The Moon",
+        "narration": "Number five is closer to home. Our own Moon, 3,475 kilometres wide, lighting every night sky on Earth.",
+        "on_screen": "",
+        "fact_ids": [
+          0
+        ],
+        "footage": [
+          "full moon night",
+          "moon surface close up",
+          "moonrise ocean"
+        ],
+        "image_prompt": "cinematic view of The Moon in space, no text"
+      },
+      {
+        "rank": 4,
+        "name": "Io",
+        "narration": "Number four: Io, the most volcanic place we know, at 3,643 kilometres.",
+        "on_screen": "",
+        "fact_ids": [
+          0
+        ],
+        "footage": [
+          "volcano eruption lava",
+          "lava flow night",
+          "jupiter planet"
+        ],
+        "image_prompt": "cinematic view of Io in space, no text"
+      },
+      {
+        "rank": 3,
+        "name": "Callisto",
+        "narration": "Number three: Callisto, battered and ancient, stretching 4,821 kilometres.",
+        "on_screen": "",
+        "fact_ids": [
+          0
+        ],
+        "footage": [
+          "crater landscape",
+          "asteroid space",
+          "jupiter planet"
+        ],
+        "image_prompt": "cinematic view of Callisto in space, no text"
+      },
+      {
+        "rank": 2,
+        "name": "Titan",
+        "narration": "Number two: Titan, Saturn's hazy giant, at 5,150 kilometres. For a moment, it looks unbeatable.",
+        "on_screen": "",
+        "fact_ids": [
+          0
+        ],
+        "footage": [
+          "saturn planet",
+          "orange haze sky",
+          "methane lake"
+        ],
+        "image_prompt": "cinematic view of Titan in space, no text"
+      },
+      {
+        "rank": 1,
+        "name": "Ganymede",
+        "narration": "And number one: Ganymede. At 5,268 kilometres, Jupiter's king of moons is the largest in the entire solar system.",
+        "on_screen": "",
+        "fact_ids": [
+          0
+        ],
+        "footage": [
+          "jupiter planet space",
+          "galaxy stars timelapse",
+          "moon orbit planet"
+        ],
+        "image_prompt": "cinematic view of Ganymede in space, no text"
+      }
     ],
-    "footage": [
-     "uranus planet space",
-     "icy moon surface",
-     "stars night sky"
+    "ending": "Ten worlds, all circling something bigger. Which one would you visit first?",
+    "subscribe": "Follow GLOBAL TOP 10 AI for a new ranking every day.",
+    "intro_footage": [
+      "solar system planets",
+      "galaxy stars timelapse",
+      "telescope night sky"
     ],
-    "image_prompt": "cinematic view of Oberon in space, no text"
-   },
-   {
-    "rank": 9,
-    "name": "Rhea",
-    "narration": "Number nine: Rhea. Saturn's second-largest moon edges past Oberon by just four kilometres, at 1,527.",
-    "on_screen": "",
-    "fact_ids": [
-     0
-    ],
-    "footage": [
-     "saturn rings space",
-     "cratered moon surface",
-     "space stars"
-    ],
-    "image_prompt": "cinematic view of Rhea in space, no text"
-   },
-   {
-    "rank": 8,
-    "name": "Titania",
-    "narration": "Number eight: Titania, the biggest moon of Uranus, spanning 1,578 kilometres of ice and rock.",
-    "on_screen": "",
-    "fact_ids": [
-     0
-    ],
-    "footage": [
-     "uranus planet",
-     "ice canyon",
-     "night sky stars"
-    ],
-    "image_prompt": "cinematic view of Titania in space, no text"
-   },
-   {
-    "rank": 7,
-    "name": "Triton",
-    "narration": "Number seven: Triton. Neptune's giant measures 2,707 kilometres, and it is the only large moon that orbits backwards.",
-    "on_screen": "",
-    "fact_ids": [
-     0
-    ],
-    "footage": [
-     "neptune planet blue",
-     "frozen surface ice",
-     "deep space"
-    ],
-    "image_prompt": "cinematic view of Triton in space, no text"
-   },
-   {
-    "rank": 6,
-    "name": "Europa",
-    "narration": "Number six: Europa, the icy world scientists hope may hide an ocean, 3,122 kilometres across.",
-    "on_screen": "",
-    "fact_ids": [
-     0
-    ],
-    "footage": [
-     "ice sheet cracks",
-     "frozen ocean",
-     "jupiter planet"
-    ],
-    "image_prompt": "cinematic view of Europa in space, no text"
-   },
-   {
-    "rank": 5,
-    "name": "The Moon",
-    "narration": "Number five is closer to home. Our own Moon, 3,475 kilometres wide, lighting every night sky on Earth.",
-    "on_screen": "",
-    "fact_ids": [
-     0
-    ],
-    "footage": [
-     "full moon night",
-     "moon surface close up",
-     "moonrise ocean"
-    ],
-    "image_prompt": "cinematic view of The Moon in space, no text"
-   },
-   {
-    "rank": 4,
-    "name": "Io",
-    "narration": "Number four: Io, the most volcanic place we know, at 3,643 kilometres.",
-    "on_screen": "",
-    "fact_ids": [
-     0
-    ],
-    "footage": [
-     "volcano eruption lava",
-     "lava flow night",
-     "jupiter planet"
-    ],
-    "image_prompt": "cinematic view of Io in space, no text"
-   },
-   {
-    "rank": 3,
-    "name": "Callisto",
-    "narration": "Number three: Callisto, battered and ancient, stretching 4,821 kilometres.",
-    "on_screen": "",
-    "fact_ids": [
-     0
-    ],
-    "footage": [
-     "crater landscape",
-     "asteroid space",
-     "jupiter planet"
-    ],
-    "image_prompt": "cinematic view of Callisto in space, no text"
-   },
-   {
-    "rank": 2,
-    "name": "Titan",
-    "narration": "Number two: Titan, Saturn's hazy giant, at 5,150 kilometres. For a moment, it looks unbeatable.",
-    "on_screen": "",
-    "fact_ids": [
-     0
-    ],
-    "footage": [
-     "saturn planet",
-     "orange haze sky",
-     "methane lake"
-    ],
-    "image_prompt": "cinematic view of Titan in space, no text"
-   },
-   {
-    "rank": 1,
-    "name": "Ganymede",
-    "narration": "And number one: Ganymede. At 5,268 kilometres, Jupiter's king of moons is the largest in the entire solar system.",
-    "on_screen": "",
-    "fact_ids": [
-     0
-    ],
-    "footage": [
-     "jupiter planet space",
-     "galaxy stars timelapse",
-     "moon orbit planet"
-    ],
-    "image_prompt": "cinematic view of Ganymede in space, no text"
-   }
-  ],
-  "ending": "Ten worlds, all circling something bigger. Which one would you visit first?",
-  "subscribe": "Follow GLOBAL TOP 10 AI for a new ranking every day.",
-  "intro_footage": [
-   "solar system planets",
-   "galaxy stars timelapse",
-   "telescope night sky"
-  ],
-  "outro_footage": [
-   "earth from space",
-   "milky way timelapse"
-  ]
- }
+    "outro_footage": [
+      "earth from space",
+      "milky way timelapse"
+    ]
+  }
 }

@@ -123,5 +123,108 @@ def pixabay(s: Settings, query: str, out: Path, used: set | None = None) -> tupl
     raise VisualError(f"pixabay: no suitable video for '{query}'")
 
 
-FOOTAGE_PROVIDERS = {"pexels": pexels, "pixabay": pixabay}
-IMAGE_PROVIDERS = {"openai_image": openai_image, "gemini_image": gemini_image}
+SPACE_WORDS = ("space", "planet", "moon", "star", "galaxy", "nasa", "rocket", "mars", "jupiter", "saturn", "venus",
+               "mercury", "neptune", "uranus", "pluto", "orbit", "astronaut", "nebula", "solar", "comet", "asteroid",
+               "telescope", "sun", "earth from space", "cosmos", "universe", "launch", "satellite", "eclipse")
+NASA_API = "https://images-api.nasa.gov"
+NON_FREE_HINTS = ("©", "copyright", "all rights reserved", "getty", "reuters", "associated press", "ap photo")
+
+
+def _space_query(query: str) -> bool:
+    q = query.lower()
+    return any(w in q for w in SPACE_WORDS)
+
+
+def _nasa_items(query: str, media_type: str) -> list[dict]:
+    data = http.get_json(f"{NASA_API}/search", params={"q": query[:100], "media_type": media_type, "page_size": 25},
+                         timeout=30)
+    out = []
+    for it in data.get("collection", {}).get("items", []):
+        d = (it.get("data") or [{}])[0]
+        blob = " ".join(str(d.get(k, "")) for k in ("description", "photographer", "secondary_creator", "title")).lower()
+        if any(h in blob for h in NON_FREE_HINTS):
+            continue                      # credited to a non-NASA rights holder -> skip
+        out.append({"href": it.get("href"), "nasa_id": d.get("nasa_id"), "title": d.get("title", ""),
+                    "center": d.get("center", "NASA")})
+    return out
+
+
+def nasa_video(s: Settings, query: str, out: Path, used: set | None = None) -> tuple[Path, str, dict]:
+    """NASA Image and Video Library (no key). Used only for space/astronomy queries."""
+    if not _space_query(query):
+        raise VisualError("nasa: not a space query")
+    used = used if used is not None else set()
+    for it in _nasa_items(query, "video"):
+        vid = f"nasa:{it['nasa_id']}"
+        if vid in used or not it["href"]:
+            continue
+        files = http.get_json(it["href"], timeout=30)
+        mp4 = [f for f in files if isinstance(f, str) and f.endswith(".mp4")]
+        pick = next((f for k in ("~medium.mp4", "~mobile.mp4", "~orig.mp4") for f in mp4 if f.endswith(k)), None)
+        if not pick:
+            continue
+        try:
+            path = _download(pick.replace("http://", "https://"), out)
+        except Exception:
+            continue
+        used.add(vid)
+        return path, f"NASA ({it['center']})", {"provider": "nasa", "nasa_id": it["nasa_id"], "title": it["title"],
+                                               "file_url": pick, "query": query}
+    raise VisualError(f"nasa: no suitable video for '{query}'")
+
+
+def nasa_image(s: Settings, query: str, out: Path) -> tuple[Path, str, dict]:
+    if not _space_query(query):
+        raise VisualError("nasa: not a space query")
+    for it in _nasa_items(query, "image"):
+        files = http.get_json(it["href"], timeout=30)
+        pick = next((f for k in ("~large.jpg", "~medium.jpg", "~orig.jpg") for f in files
+                     if isinstance(f, str) and f.endswith(k)), None)
+        if not pick:
+            continue
+        r = http.request("GET", pick.replace("http://", "https://"), timeout=60, max_bytes=25_000_000, check_public=True)
+        if r.status_code >= 400 or len(r.content) < 30_000:
+            continue
+        out = out.with_suffix(".jpg")
+        out.write_bytes(r.content)
+        return out, f"NASA ({it['center']})", {"provider": "nasa", "nasa_id": it["nasa_id"], "title": it["title"],
+                                               "file_url": pick, "query": query}
+    raise VisualError(f"nasa: no suitable image for '{query}'")
+
+
+OPENVERSE_LICENCES = {"cc0": ("CC0 1.0", "https://creativecommons.org/publicdomain/zero/1.0/", False),
+                      "pdm": ("Public Domain Mark 1.0", "https://creativecommons.org/publicdomain/mark/1.0/", False),
+                      "by": ("CC BY", "https://creativecommons.org/licenses/by/4.0/", True)}
+
+
+def openverse_image(s: Settings, query: str, out: Path) -> tuple[Path, str, dict]:
+    """Creative Commons images via Openverse (no key). ONLY CC0, Public Domain Mark and CC BY are accepted —
+    BY-SA (share-alike would bind the whole video), NC (non-commercial) and ND (no derivatives) are excluded."""
+    data = http.get_json("https://api.openverse.org/v1/images/", params={
+        "q": query[:200], "license": "cc0,pdm,by", "page_size": 20, "mature": "false"}, timeout=30)
+    for it in data.get("results", []):
+        lic = (it.get("license") or "").lower()
+        if lic not in OPENVERSE_LICENCES or (it.get("width") or 0) < 900:
+            continue
+        try:
+            r = http.request("GET", it["url"], timeout=60, max_bytes=25_000_000, check_public=True)
+        except Exception:
+            continue
+        if r.status_code >= 400 or len(r.content) < 30_000:
+            continue
+        out = out.with_suffix(".jpg")
+        out.write_bytes(r.content)
+        name, url, needs_credit = OPENVERSE_LICENCES[lic]
+        return out, it.get("creator") or "Unknown creator", {
+            "provider": "openverse", "openverse_id": it.get("id"), "landing_page": it.get("foreign_landing_url"),
+            "file_url": it.get("url"), "attribution": it.get("attribution", ""), "query": query,
+            "licence_override": {"licence_name": f"{name} {it.get('license_version') or ''}".strip(),
+                                 "licence_url": it.get("license_url") or url, "commercial_use": True,
+                                 "attribution_required": needs_credit, "modifications_allowed": True,
+                                 "synthetic": False, "notes": it.get("attribution", "")}}
+    raise VisualError(f"openverse: no suitable CC0/PD/CC-BY image for '{query}'")
+
+
+FOOTAGE_PROVIDERS = {"pexels": pexels, "pixabay": pixabay, "nasa": nasa_video}
+SEARCH_IMAGE_PROVIDERS = {"nasa_image": nasa_image, "openverse": openverse_image}   # real photos, searched by query
+IMAGE_PROVIDERS = {"openai_image": openai_image, "gemini_image": gemini_image}     # AI-generated, by prompt

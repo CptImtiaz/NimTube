@@ -173,3 +173,24 @@ requests (Apache-2.0) · PyYAML (MIT) · defusedxml (PSF) · Pillow (MIT-CMU) ·
 google-api-python-client, google-auth, google-auth-oauthlib (Apache-2.0) · cryptography (Apache-2.0/BSD) ·
 pytest (MIT) · pip-audit (Apache-2.0) · system: FFmpeg (LGPL/GPL build-dependent), espeak-ng (GPLv3, optional),
 DejaVu fonts (free licence). No code from the researched repositories is included.
+
+## Update — more media sources, free voice, hooks (Nov 2026)
+
+**New media sources (all checked for YouTube-safe licences):**
+- **NASA Image & Video Library**: no key needed. Used only for space and astronomy queries. Items credited to other rights holders (Getty, AP, etc.) are skipped. The NASA logo is never used.
+- **Openverse**: Creative Commons photos, no key needed. Only CC0, Public Domain Mark and CC BY are accepted. BY-SA, NC and ND are always excluded. Each photo's licence is recorded with that asset, and CC BY credits go into the description automatically.
+- **Search images** are now tried before AI images. The fallback order is: footage, then real photos, then AI still, then original cards.
+
+**Kokoro-82M voice:**
+- Apache-2.0 licence, runs locally, free. Word timings come from the model itself.
+- It is installed in the workflows with CPU torch. If the install fails, the next voice in the list is used.
+- Voice order: ElevenLabs → Kokoro → OpenAI → Edge.
+
+**Original sound effects:** whoosh, impact and riser, synthesised with FFmpeg (no samples, so no licence risk). Each entry opens on a whoosh, the top-3 re-hook gets a riser, and #1 gets an impact.
+
+**Hook system:**
+- `hook`: a spoken curiosity gap (≤14 words). Weak openers like "Did you know" and "Welcome" are rejected.
+- `hook_text`: an on-screen hook of ≤6 words. Numbers are fact-checked, and it must not reveal #1.
+- **Teaser:** the video opens on a 1.2–2.4 s flash of the #1 footage with the hook slammed on screen and an impact sound. The animated TOP 10 title appears after it.
+- `rehook`: spoken right before #3, with a "THE TOP 3" banner.
+- Settings: `video.hook_teaser`, `video.sfx`, `video.sfx_volume`, `voice.kokoro_voice`, `visuals.search_image_providers`.

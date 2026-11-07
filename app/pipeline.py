@@ -23,7 +23,7 @@ from .log import get_logger, redact
 from .quality_control.checks import run_quality_checks
 from .ranking.engine import RankingRejected, build_ranking
 from .research.engine import research_topic
-from .script_generation.writer import write_script
+from .script_generation.writer import segment_voice_text, write_script
 from .thumbnail.seo import build_metadata
 from .topic_selection.selector import select_topic
 from .trend_discovery.engine import discover
@@ -169,7 +169,7 @@ def run(s: Settings, resume_job: str | None = None, forced_topic: str | None = N
                 def voice_all():
                     texts = {"intro": f"{script['hook']} {script['intro']}"}
                     for seg in script["segments"]:
-                        texts[f"seg{seg['rank']}"] = seg["narration"]
+                        texts[f"seg{seg['rank']}"] = segment_voice_text(script, seg)
                     texts["outro"] = f"{script.get('ending', '')} {script.get('subscribe', '')}".strip()
                     voices = {}
                     for k, t in texts.items():
@@ -194,6 +194,9 @@ def run(s: Settings, resume_job: str | None = None, forced_topic: str | None = N
                 save("render", timed("render", lambda: render_video(s, ranking, script, voices, visuals,
                                                                      work / "render", track)))
                 data["render"]["music"] = track["file"] if track else None
+                for fx in data["render"].get("sfx", []):
+                    register_asset(s, db, job_id, kind="sfx", path=Path(fx), source="original_sfx",
+                                   creator="GLOBAL TOP 10 AI", proof={"generator": "app.video_editing.sfx"})
             render = data["render"]
             video = Path(render["video"])
 

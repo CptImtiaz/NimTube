@@ -10,6 +10,7 @@ from ..config import Settings
 from ..log import get_logger
 from ..visual_generation.graphics import fmt_value
 from .captions import section_ass, write_srt
+from .sfx import make_sfx
 
 logger = get_logger("render")
 VOICE_LEAD = 0.25     # seconds of picture before narration starts in each section
@@ -36,8 +37,10 @@ def _ass_path(p: Path) -> str:
     return str(p).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
 
 
-def render_section(s: Settings, shots: list[dict], voice: dict, ass: Path, out: Path, duration: float):
-    """shots: [{kind: image|video, path, dur}] whose durations sum to `duration`."""
+def render_section(s: Settings, shots: list[dict], voice: dict, ass: Path, out: Path, duration: float,
+                   sfx: list[tuple[Path, float, float]] | None = None):
+    """shots: [{kind: image|video, path, dur, start?}] whose durations sum to `duration`.
+    sfx: [(wav, at_seconds, volume)] mixed under the narration."""
     w, h, fps = s.get("video.width", 1080), s.get("video.height", 1920), s.get("video.fps", 30)
     tr = float(s.get("video.transition_sec", 0.35))
     g = s.get("visuals.grade", "")
@@ -61,6 +64,8 @@ def render_section(s: Settings, shots: list[dict], voice: dict, ass: Path, out: 
                 clip_dur = 0.0
             # start a little into the clip (skip shaky first frames); loop only if the clip is too short
             start = min(1.0, max(0.0, (clip_dur - d) / 3)) if clip_dur > d else 0.0
+            if sh.get("start") is not None and clip_dur > d:              # e.g. teaser uses a later moment
+                start = max(0.0, min(float(sh["start"]), clip_dur - d))
             loop = ["-stream_loop", "-1"] if clip_dur and clip_dur < d + start else []
             inputs += [*loop, "-ss", f"{start:.2f}", "-t", f"{d:.3f}", "-i", sh["path"]]
             filters.append(f"[{i}:v]scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},setsar=1,"
@@ -73,8 +78,21 @@ def render_section(s: Settings, shots: list[dict], voice: dict, ass: Path, out: 
     filters.append(f"{''.join(labels)}concat=n={n}:v=1:a=0,ass='{_ass_path(ass)}',"
                    f"fade=t=in:st=0:d={tr},fade=t=out:st={max(duration - tr, 0):.3f}:d={tr}[v]")
     lead_ms = int(VOICE_LEAD * 1000)
+    sfx = [x for x in (sfx or []) if x[1] < duration]
+    voice_out = "[vo]" if sfx else "[a]"
     filters.append(f"[{a_idx}:a]aresample=48000,aformat=channel_layouts=stereo,adelay={lead_ms}|{lead_ms},"
-                   f"apad,atrim=duration={duration:.3f}[a]")
+                   f"apad,atrim=duration={duration:.3f}{voice_out}")
+    if sfx:
+        mix = ["[vo]"]
+        for j, (wav, at, vol) in enumerate(sfx):
+            idx = a_idx + 1 + j
+            inputs += ["-i", wav]
+            ms = int(max(at, 0) * 1000)
+            filters.append(f"[{idx}:a]aresample=48000,aformat=channel_layouts=stereo,volume={vol},"
+                           f"adelay={ms}|{ms}[fx{j}]")
+            mix.append(f"[fx{j}]")
+        filters.append(f"{''.join(mix)}amix=inputs={len(mix)}:duration=first:normalize=0,"
+                       f"atrim=duration={duration:.3f}[a]")
     run(["ffmpeg", "-y", "-loglevel", "error", *inputs, "-filter_complex", ";".join(filters),
          "-map", "[v]", "-map", "[a]", "-t", f"{duration:.3f}", "-r", fps,
          "-c:v", "libx264", "-preset", s.get("video.preset", "veryfast"), "-crf", s.get("video.crf", 20),
@@ -103,20 +121,44 @@ def render_video(s: Settings, ranking: dict, script: dict, voices: dict, visuals
     sections, srt_sections, offset = [], [], 0.0
     by_rank = {e["rank"]: e for e in ranking["entries"]}
 
-    def add(key: str, shots_src: list[dict], **ass_kw):
+    use_sfx = bool(s.get("video.sfx", True))
+    fx = make_sfx(work / "sfx") if use_sfx else {}
+    fx_vol = float(s.get("video.sfx_volume", 0.55))
+
+    def add(key: str, shots_src: list[dict], teaser: dict | None = None, sfx=None, **ass_kw):
         nonlocal offset
         v = voices[key]
         dur = VOICE_LEAD + v["duration"] + TAIL
-        shots = _split(s, dur, shots_src)
+        if teaser:                                 # 1.5 s flash of the #1 footage before the intro shots
+            t = teaser["dur"]
+            shots = [teaser, *_split(s, dur - t, shots_src)]
+        else:
+            shots = _split(s, dur, shots_src)
         ass = section_ass(work / f"{key}.ass", dur, v["words"], voice_offset=VOICE_LEAD, **ass_kw)
-        out = render_section(s, shots, v, ass, work / f"{key}.mp4", dur)
+        out = render_section(s, shots, v, ass, work / f"{key}.mp4", dur,
+                             sfx=[(fx[n], at, fx_vol * g) for n, at, g in (sfx or []) if n in fx])
         sections.append(out)
         srt_sections.append({"offset": offset + VOICE_LEAD, "words": v["words"]})
         offset += dur
 
     label = "EDITORIAL RANKING" if ranking["ranking_type"] == "editorial" else ""
-    add("intro", visuals["intro"], brand=bool(visuals.get("intro_has_footage")), label=label,
-        title=ranking["title"] if visuals.get("intro_has_footage") else "")
+    teaser, hook_until = None, 0.0
+    hook_text = (script.get("hook_text") or "").strip()
+    no1_clips = [x for x in visuals["segments"].get(1, []) if x.get("kind") == "video"]
+    if hook_text and s.get("video.hook_teaser", True):
+        # the teaser lasts roughly as long as the spoken hook sentence (clamped to 1.2-2.4 s)
+        n = len((script.get("hook") or "").split())
+        words = voices["intro"]["words"]
+        spoken = words[min(n, len(words)) - 1]["end"] + VOICE_LEAD if words and n else 1.5
+        hook_until = round(min(max(spoken, 1.2), 2.4), 2)
+        if no1_clips:
+            teaser = {**no1_clips[-1], "dur": hook_until, "start": 3.0, "role": "teaser"}
+    intro_kw = dict(brand=bool(visuals.get("intro_has_footage")), label=label,
+                    title=ranking["title"] if visuals.get("intro_has_footage") else "")
+    if hook_text:
+        intro_kw.update(hook_text=hook_text, hook_until=hook_until or 1.5)
+    add("intro", visuals["intro"], teaser=teaser, sfx=[("impact", 0.0, 1.0), ("whoosh", (hook_until or 1.5) - 0.2, 0.8)],
+        **intro_kw)
     for seg in script["segments"]:
         e = by_rank[seg["rank"]]
         items = visuals["segments"][e["rank"]]
@@ -124,7 +166,13 @@ def render_video(s: Settings, ranking: dict, script: dict, voices: dict, visuals
         val = fmt_value(e.get("value"), e.get("unit")) if isinstance(e.get("value"), (int, float)) else ""
         dur_est = VOICE_LEAD + voices[f"seg{e['rank']}"]["duration"] + TAIL
         card_t = sum(x["dur"] for x in _split(s, dur_est, items) if x.get("role") == "data_card")
-        add(f"seg{e['rank']}", items, rank=e["rank"], name=e["name"],
+        fx_list = [("whoosh", 0.0, 1.0)]
+        banner = ""
+        if e["rank"] == 3 and script.get("rehook"):
+            banner, fx_list = "THE TOP 3", [("riser", 0.0, 0.9), ("whoosh", 0.0, 0.7)]
+        if e["rank"] == 1:
+            fx_list = [("whoosh", 0.0, 0.8), ("impact", 0.1, 1.0)]
+        add(f"seg{e['rank']}", items, sfx=fx_list, rank=e["rank"], name=e["name"], banner=banner,
             value_label=val if has_ext else "", value_until=(dur_est - card_t) if has_ext else None)
     add("outro", visuals["outro"], outro_brand=bool(visuals.get("outro_has_footage")))
 
@@ -147,4 +195,5 @@ def render_video(s: Settings, ranking: dict, script: dict, voices: dict, visuals
         run(["ffmpeg", "-y", "-loglevel", "error", "-i", joined, "-af", f"loudnorm=I={lufs}:TP=-1.5:LRA=11",
              "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-movflags", "+faststart", final])
     srt = write_srt(work / "captions.srt", srt_sections)
-    return {"video": final, "srt": srt, "duration": offset, "sections": [str(p) for p in sections]}
+    return {"video": final, "srt": srt, "duration": offset, "sections": [str(p) for p in sections],
+            "sfx": [str(p) for p in fx.values()], "hook_teaser": bool(teaser)}

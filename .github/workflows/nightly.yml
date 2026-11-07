@@ -45,8 +45,13 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install FFmpeg and fonts
-        run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg fonts-dejavu-core
+        run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg fonts-dejavu-core espeak-ng
       - run: pip install -r requirements.txt
+      - name: Install free local voice (Kokoro, Apache-2.0)
+        continue-on-error: true     # if this fails, the next voice provider in the list is used
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements-voice.txt
       - name: Restore encrypted state
         run: python scripts/state.py pull
       - name: Check configuration (names only)

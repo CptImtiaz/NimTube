@@ -71,12 +71,27 @@ def check_script(s: Settings, script: dict, ranking: dict) -> list[str]:
 
     # global numbers in hook/intro/ending must be supported by SOME entry
     all_supported = [n for e in ranking["entries"] for n in _supported_numbers(e)]
-    for part in ("hook", "intro", "ending"):
+    for part in ("hook", "hook_text", "rehook", "intro", "ending"):
         for n in numbers_in(script.get(part, "")):
             if not _is_supported(n, all_supported):
                 problems.append(f"{part}: number {n:g} is not in the verified facts")
 
-    text = full_text(script).lower()
+    hook_text = (script.get("hook_text") or "").strip()
+    if not hook_text:
+        problems.append("hook_text (on-screen hook, max 6 words) is missing")
+    elif len(hook_text.split()) > 6:
+        problems.append(f"hook_text must be at most 6 words: '{hook_text}'")
+    no1 = by_rank.get(1)
+    if no1 and hook_text:
+        toks = [t for t in normalise(no1["name"]).split() if t not in ("the", "a", "an") and len(t) > 2]
+        if toks and all(t in normalise(hook_text).split() for t in toks):
+            problems.append("hook_text must not reveal the #1 entry")
+    if len((script.get("hook") or "").split()) > 18:
+        problems.append("hook is too long: keep it to one short sentence (max 14 words)")
+    if re.match(r"(?i)\s*(have you ever wondered|did you know|welcome)", script.get("hook") or ""):
+        problems.append("hook uses a weak opener; open with the curiosity gap itself")
+
+    text = (full_text(script) + " " + hook_text).lower()
     for ph in BANNED_PHRASES:
         if ph in text:
             problems.append(f"banned phrase used: '{ph}'")

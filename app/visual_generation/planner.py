@@ -16,7 +16,7 @@ from ..copyright.provenance import register_asset
 from ..db import DB
 from ..log import get_logger
 from . import graphics
-from .providers import FOOTAGE_PROVIDERS, IMAGE_PROVIDERS
+from .providers import FOOTAGE_PROVIDERS, IMAGE_PROVIDERS, SEARCH_IMAGE_PROVIDERS
 
 logger = get_logger("visuals")
 
@@ -27,11 +27,15 @@ class Visuals:
         self.used: set[str] = set()
         self.footage_order = [] if s.mock else [p for p in s.get("visuals.footage_providers", []) if p in FOOTAGE_PROVIDERS]
         self.image_order = [] if s.mock else [p for p in s.get("visuals.image_providers", []) if p in IMAGE_PROVIDERS]
+        self.search_image_order = [] if s.mock else [p for p in s.get("visuals.search_image_providers", [])
+                                                     if p in SEARCH_IMAGE_PROVIDERS]
         self.n = 0
 
     def _register(self, kind, path, source, creator, proof) -> dict | None:
+        proof = dict(proof or {})
+        override = proof.pop("licence_override", None)          # per-asset licence (e.g. Openverse CC BY)
         a = register_asset(self.s, self.db, self.job_id, kind=kind, path=path, source=source, creator=creator,
-                           proof=proof)
+                           proof=proof, licence_override=override)
         if a["status"] == "rejected":
             return None
         return {"kind": "video" if kind == "video" else "image", "path": str(path), "asset_id": a["asset_id"],
@@ -55,6 +59,24 @@ class Visuals:
                     clips.append(item)
                     break            # next query for the next clip -> more variety
         return clips
+
+    def search_image(self, queries: list[str]) -> dict | None:
+        """Real photos found by query (NASA for space topics, Openverse CC0/PD/CC-BY) — tried before AI images."""
+        for q in [q for q in queries if q][:3]:
+            for prov in self.search_image_order:
+                self.n += 1
+                try:
+                    path, creator, proof = SEARCH_IMAGE_PROVIDERS[prov](self.s, q, self.work / f"photo{self.n:03d}_{prov}")
+                except Exception as e:
+                    logger.info(f"{prov} '{q}': {str(e)[:120]}")
+                    continue
+                if str(path) in self.used:
+                    continue
+                item = self._register("image", path, prov, creator, proof)
+                if item:
+                    self.used.add(str(path))
+                    return item
+        return None
 
     def ai_image(self, prompt: str) -> dict | None:
         for prov in self.image_order:
@@ -103,7 +125,8 @@ def plan_visuals(s: Settings, db: DB, job_id: str, ranking: dict, script: dict, 
         if clips:
             footage_entries += 1
         else:
-            img = v.ai_image(seg.get("image_prompt") or (seg.get("visual") or {}).get("prompt") or e["name"])
+            img = v.search_image([*queries, e["name"]]) or \
+                v.ai_image(seg.get("image_prompt") or (seg.get("visual") or {}).get("prompt") or e["name"])
             if img:
                 items.append(img)
         card = v.original(graphics.entry_card(e, ranking, work / f"rank{e['rank']:02d}_bars.png", "bars"),

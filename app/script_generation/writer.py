@@ -28,7 +28,20 @@ more on #1. Entries with "stale": true must mention the year of the figure.
 VERIFIED FACTS (countdown order, #10 first):
 {facts}
 
-Write the script. Structure: powerful hook (1 sentence, a surprising verified fact or question) -> brief intro
+HOOKS (the first 2 seconds decide whether a Short is watched — retention matters more than anything else):
+- "hook": ONE spoken sentence, max 14 words, that opens a curiosity gap using a verified fact. Proven formulas:
+  * contrast:  "The biggest one is X times larger than number ten."
+  * tease #1:  "Number one is something you use every single day."
+  * challenge: "Most people get number one wrong."
+  * stakes:    "One of these is losing a record every year."
+  Never start with "Have you ever wondered", "Did you know", "Welcome" or the channel name.
+- "hook_text": the on-screen hook shown over a 1.5 s teaser of the #1 footage — max 6 words, punchy, ALL facts
+  verified (e.g. "#1 IS 3x BIGGER", "MOST PEOPLE GET #1 WRONG"). Must not reveal the #1 name.
+- "rehook": one spoken sentence (max 12 words) said right before #3 to stop viewers leaving
+  (e.g. "Now the top three — and the gap gets enormous."). No new numbers unless verified.
+- Keep open loops: never reveal #1 before its segment; tease it once more around #5 in that entry's narration.
+
+Write the script. Structure: hook -> brief intro
 (state what is ranked and how{editorial_note}) -> #10 down to #1 with smooth transitions -> strong #1 reveal ->
 memorable ending -> optional one-line subscribe invitation.
 For each entry also plan the REAL FOOTAGE that will be on screen (licensed stock video search terms).
@@ -38,7 +51,7 @@ brands, logos, movies or TV shows. Give 3 alternatives per entry, most specific 
 Also give one AI image prompt as a fallback (no text, no logos, no real identifiable people).
 
 Return JSON:
-{{"hook": "...", "intro": "...",
+{{"hook": "...", "hook_text": "...", "rehook": "...", "intro": "...",
   "intro_footage": ["...", "...", "..."],
   "segments": [{{"rank": 10, "name": "...", "narration": "Number ten: ...", "on_screen": "<short value label>",
                 "footage": ["...", "...", "..."], "image_prompt": "...", "fact_ids": [0]}}],
@@ -77,9 +90,19 @@ def write_script(s: Settings, llm: LLM, ranking: dict, feedback: str = "") -> di
 
 def full_text(script: dict) -> str:
     parts = [script.get("hook", ""), script.get("intro", "")]
-    parts += [seg.get("narration", "") for seg in script.get("segments", [])]
+    for seg in script.get("segments", []):
+        if seg.get("rank") == 3 and script.get("rehook"):
+            parts.append(script["rehook"])
+        parts.append(seg.get("narration", ""))
     parts += [script.get("ending", ""), script.get("subscribe", "")]
     return " ".join(p for p in parts if p)
+
+
+def segment_voice_text(script: dict, seg: dict) -> str:
+    """What is spoken for one entry: the re-hook goes in front of #3."""
+    if seg.get("rank") == 3 and script.get("rehook"):
+        return f"{script['rehook']} {seg.get('narration', '')}".strip()
+    return seg.get("narration", "")
 
 
 def to_json(script: dict) -> str:

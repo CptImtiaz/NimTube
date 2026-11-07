@@ -44,6 +44,8 @@ Style: Value,DejaVu Sans,64,{GOLD_ASS},{GOLD_ASS},&H00000000,&H96000000,1,0,0,0,
 Style: Label,DejaVu Sans,40,{WHITE_ASS},{WHITE_ASS},&H00000000,&H96000000,1,0,0,0,100,100,3,0,3,8,0,8,60,60,330,1
 Style: Title,DejaVu Sans,96,{WHITE_ASS},{WHITE_ASS},&H00000000,&H96000000,1,0,0,0,100,100,1,0,1,7,4,8,70,70,560,1
 Style: Top10,DejaVu Sans,190,{GOLD_ASS},{GOLD_ASS},&H00000000,&H96000000,1,0,0,0,100,100,2,0,1,9,5,8,40,40,330,1
+Style: Hook,DejaVu Sans,112,{WHITE_ASS},{WHITE_ASS},&H00000000,&HB4000000,1,0,0,0,100,100,1,0,1,9,6,5,70,70,0,1
+Style: Banner,DejaVu Sans,62,&H00101010&,&H00101010&,{GOLD_ASS},&H00000000,1,0,0,0,100,100,3,0,3,18,0,8,60,60,250,1
 Style: Cap,DejaVu Sans,74,{WHITE_ASS},{WHITE_ASS},&H00000000,&H96000000,1,0,0,0,100,100,0,0,1,7,3,2,80,80,400,1
 
 [Events]
@@ -78,11 +80,28 @@ def caption_events(words: list[dict], offset: float = 0.0, max_words: int = 4, m
 
 def section_ass(path: Path, duration: float, words: list[dict], *, rank: int | None = None, name: str = "",
                 value_label: str = "", value_until: float | None = None, label: str = "", brand: bool = True,
-                voice_offset: float = 0.0, title: str = "", outro_brand: bool = False):
+                voice_offset: float = 0.0, title: str = "", outro_brand: bool = False, hook_text: str = "",
+                hook_until: float = 0.0, banner: str = ""):
     ev = []
+    title_from = 0.0
+    if hook_text and hook_until > 0:     # teaser of #1: big punchy hook, slam-in then hold
+        lines, cur = [], ""
+        for word in esc(hook_text).upper().split():
+            if cur and len(cur) + 1 + len(word) > 14:
+                lines.append(cur)
+                cur = word
+            else:
+                cur = f"{cur} {word}".strip()
+        lines.append(cur)
+        slam = r"{\fad(0,150)\fscx160\fscy160\t(0,180,\fscx100\fscy100)}"
+        ev.append(f"Dialogue: 4,{t_ass(0)},{t_ass(hook_until)},Hook,,0,0,0,,{slam}" + "\\N".join(lines[:3]))
+        title_from = hook_until
+    if banner:                      # re-hook banner, e.g. before the top 3
+        ev.append(f"Dialogue: 4,{t_ass(0)},{t_ass(min(2.2, duration))},Banner,,0,0,0,,"
+                  r"{\fad(120,250)\fscx70\t(0,200,\fscx100)}" + esc(banner).upper())
     if title:                       # intro over real footage: animated "TOP 10" + topic
         topic = re.sub(r"(?i)^top\s*10\s*", "", title).strip().upper()
-        ev.append(f"Dialogue: 2,{t_ass(0)},{t_ass(duration)},Top10,,0,0,0,,"
+        ev.append(f"Dialogue: 2,{t_ass(title_from)},{t_ass(duration)},Top10,,0,0,0,,"
                   r"{\fad(200,300)\fscx40\fscy40\t(0,300,\fscx110\fscy110)\t(300,450,\fscx100\fscy100)}TOP 10")
         lines, cur = [], ""
         for word in esc(topic).split():              # wrap to ~16 characters per line (fits 1080 px at 96 pt)
@@ -92,7 +111,7 @@ def section_ass(path: Path, duration: float, words: list[dict], *, rank: int | N
             else:
                 cur = f"{cur} {word}".strip()
         lines.append(cur)
-        ev.append(f"Dialogue: 2,{t_ass(0.35)},{t_ass(duration)},Title,,0,0,0,,{{\\fad(350,300)}}" + "\\N".join(lines[:4]))
+        ev.append(f"Dialogue: 2,{t_ass(title_from + 0.35)},{t_ass(duration)},Title,,0,0,0,,{{\\fad(350,300)}}" + "\\N".join(lines[:4]))
     if outro_brand:
         ev.append(f"Dialogue: 2,{t_ass(0.2)},{t_ass(duration)},Top10,,0,0,0,,"
                   r"{\fad(400,400)\fs84}GLOBAL TOP 10 AI")

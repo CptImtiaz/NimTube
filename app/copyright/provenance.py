@@ -122,7 +122,7 @@ def attribution_lines(db: DB, job_id: str) -> list[str]:
     lines = []
     for a in db.query("SELECT DISTINCT source, creator, licence_name, licence_url, attribution, kind FROM assets "
                       "WHERE job_id=? AND status!='rejected'", (job_id,)):
-        if a["source"] == "original_graphics":
+        if a["source"] in ("original_graphics", "original_sfx"):
             continue
         who = f" by {a['creator']}" if a["creator"] else ""
         lines.append(f"{a['kind'].title()}{who} — {a['licence_name']} {a['licence_url']}".strip())

@@ -211,7 +211,54 @@ def tts_espeak(s: Settings, text: str, out: Path) -> list[dict] | None:
     return None
 
 
-PROVIDERS = {"openai": tts_openai, "elevenlabs": tts_elevenlabs, "edge": tts_edge, "espeak": tts_espeak}
+_KOKORO = {}
+
+
+def tts_kokoro(s: Settings, text: str, out: Path) -> list[dict] | None:
+    """Kokoro-82M (Apache-2.0 open weights) running locally on the runner's CPU — free, no API key, natural voice.
+    Install with: pip install -r requirements-voice.txt  (needs espeak-ng for out-of-vocabulary words).
+    Returns exact word timings from the model's own token timestamps."""
+    try:
+        import numpy as np
+        from kokoro import KPipeline
+    except ImportError as e:
+        raise TTSError(f"kokoro not installed ({e.name}); pip install -r requirements-voice.txt")
+    voice = s.get("voice.kokoro_voice", "am_michael")
+    lang = voice[0] if voice[:1] in "ab" else "a"                 # a = American, b = British English voices
+    if lang not in _KOKORO:
+        _KOKORO[lang] = KPipeline(lang_code=lang)
+    pipe = _KOKORO[lang]
+    sr, chunks, words, offset = 24000, [], [], 0.0
+    for res in pipe(text, voice=voice, speed=float(s.get("voice.speed", 1.0)), split_pattern=r"\n+"):
+        audio = res.audio
+        if audio is None:
+            continue
+        a = audio.detach().cpu().numpy() if hasattr(audio, "detach") else np.asarray(audio)
+        for t in (res.tokens or []):
+            st, en = getattr(t, "start_ts", None), getattr(t, "end_ts", None)
+            if st is None or en is None or not any(ch.isalnum() for ch in t.text):
+                continue
+            words.append({"word": t.text, "start": offset + st, "end": offset + en})
+        chunks.append(a)
+        offset += len(a) / sr
+    if not chunks:
+        raise TTSError("kokoro produced no audio")
+    pcm = (np.clip(np.concatenate(chunks), -1, 1) * 32767).astype("<i2")
+    raw = out.with_suffix(".kokoro.wav")
+    import wave
+    with wave.open(str(raw), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(sr)
+        w.writeframes(pcm.tobytes())
+    _to_wav(raw, out)
+    raw.unlink(missing_ok=True)
+    # Kokoro tokenises punctuation separately; only trust its timings if every spoken word got one
+    n_words = len([w for w in text.split() if any(c.isalnum() for c in w)])
+    return words if words and abs(len(words) - n_words) <= max(2, n_words // 20) else None
+
+
+PROVIDERS = {"kokoro": tts_kokoro, "openai": tts_openai, "elevenlabs": tts_elevenlabs, "edge": tts_edge, "espeak": tts_espeak}
 
 
 def provider_order(s: Settings) -> list[str]:

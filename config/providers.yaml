@@ -49,6 +49,42 @@ media_sources:
     synthetic: false
     notes: "Not allowed: selling unaltered copies, portraying identifiable people offensively, implying endorsement, trademarks/brands."
 
+  nasa:
+    licence_name: "NASA Images and Media Usage Guidelines (generally not copyrighted)"
+    licence_url: "https://www.nasa.gov/nasa-brand-center/images-and-media/"
+    commercial_use: true
+    attribution_required: false
+    modifications_allowed: true
+    synthetic: false
+    notes: "Do not use the NASA insignia/logo or imply NASA endorsement. Items credited to non-NASA rights holders are skipped."
+
+  nasa_image:
+    licence_name: "NASA Images and Media Usage Guidelines (generally not copyrighted)"
+    licence_url: "https://www.nasa.gov/nasa-brand-center/images-and-media/"
+    commercial_use: true
+    attribution_required: false
+    modifications_allowed: true
+    synthetic: false
+    notes: "Do not use the NASA insignia/logo or imply NASA endorsement."
+
+  openverse:
+    licence_name: "Per-image Creative Commons licence (CC0 / PDM / CC BY only)"
+    licence_url: "https://openverse.org/"
+    commercial_use: true
+    attribution_required: true
+    modifications_allowed: true
+    synthetic: false
+    notes: "Licence recorded per asset; CC BY credits are added to the description automatically."
+
+  original_sfx:
+    licence_name: "Original work (synthesised by GLOBAL TOP 10 AI)"
+    licence_url: ""
+    commercial_use: true
+    attribution_required: false
+    modifications_allowed: true
+    synthetic: false
+    notes: "Whoosh/impact sounds generated with FFmpeg."
+
 music_sources:
   # Music is checked separately. Every track in assets/music/ must be listed in assets/music/manifest.yaml
   # with its licence; unlisted tracks are never used.
@@ -58,4 +94,5 @@ voice_sources:
   openai:     {commercial_use: true,  synthetic: true, licence_url: "https://openai.com/policies/usage-policies/", notes: "Must disclose the voice is AI-generated."}
   elevenlabs: {commercial_use: true,  synthetic: true, licence_url: "https://elevenlabs.io/terms-of-use", notes: "Commercial use requires a paid plan."}
   edge:       {commercial_use: false, synthetic: true, licence_url: "https://github.com/rany2/edge-tts", notes: "Unofficial access to Microsoft Read Aloud; no published commercial licence. Testing only."}
+  kokoro:     {commercial_use: true,  synthetic: true, licence_url: "https://huggingface.co/hexgrad/Kokoro-82M", notes: "Apache-2.0 open-weight model, runs locally. Narration is AI-generated."}
   espeak:     {commercial_use: true,  synthetic: true, licence_url: "https://github.com/espeak-ng/espeak-ng", notes: "GPLv3 engine, offline. Robotic — for tests only."}

@@ -1,0 +1,5 @@
+# Optional free, local, commercially usable narrator: Kokoro-82M (Apache-2.0).
+# Install CPU-only torch FIRST (keeps the GitHub Actions install small):
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+# System package needed: espeak-ng
+kokoro==0.7.16
