@@ -331,21 +331,24 @@ class OpenAICompatProvider:
                          s.get("ai.deepseek_model", "deepseek-chat")),
             "openrouter": ("OPENROUTER_API_KEY", "https://openrouter.ai/api/v1", "OPENROUTER_MODEL",
                            s.get("ai.openrouter_model", "deepseek/deepseek-v4-flash:free")),
+            # OmniRoute: self-hosted gateway (github.com/diegosouzapw/OmniRoute) with one OpenAI-compatible /v1 API
+            "omniroute": ("OMNIROUTE_API_KEY", env("OMNIROUTE_BASE_URL").rstrip("/"), "OMNIROUTE_MODEL",
+                          s.get("ai.omniroute_model", "auto")),
         }[name]
         self.name = name
         self.key = env(cfg[0])
-        self.base = cfg[1]
+        self.base = cfg[1] if (name != "omniroute" or cfg[1].endswith("/v1")) else cfg[1] + "/v1"
         self._wanted = env(cfg[2]) or cfg[3]
         self._model: str | None = None
         self._candidates: list[str] = []
         self._dead: set[str] = set()
-        self.prefer = s.get("ai.nvidia_model_preference", []) if name == "nvidia" else []
+        self.prefer = s.get(f"ai.{name}_model_preference", []) if name in ("nvidia", "omniroute") else []
         self.temperature = s.get("ai.temperature", 0.6)
         self.db = db
 
     @property
     def available(self):
-        return bool(self.key)
+        return bool(self.key and self.base and self.base != "/v1")
 
     @property
     def model(self) -> str:
@@ -359,6 +362,9 @@ class OpenAICompatProvider:
                 nem = sorted((i for i in ids if "nemotron" in i and not any(x in i for x in (
                     "embed", "rerank", "safety", "reward", "vl", "omni", "parse"))), reverse=True)
                 cands = [m for m in self.prefer if m in ids] + [m for m in nem if m not in self.prefer]
+                if self.name == "omniroute":   # any model the gateway offers, preferred ones first
+                    cands += [i for i in ids if i not in cands and not any(x in i for x in ("embed", "image", "tts",
+                                                                                         "whisper", "rerank"))]
                 self._candidates = [m for m in (cands or self.prefer) if m not in self._dead]
                 self._model = self._candidates[0] if self._candidates else ""
             logger.info(f"{self.name} model: {self._model}")
@@ -491,7 +497,8 @@ class LLM:
             all_p = {"anthropic": AnthropicProvider(s, db), "openai": OpenAIProvider(s, db),
                      "gemini": GeminiProvider(s, db), "nvidia": OpenAICompatProvider(s, db, "nvidia"),
                      "deepseek": OpenAICompatProvider(s, db, "deepseek"),
-                     "openrouter": OpenAICompatProvider(s, db, "openrouter")}
+                     "openrouter": OpenAICompatProvider(s, db, "openrouter"),
+                     "omniroute": OpenAICompatProvider(s, db, "omniroute")}
             order = s.get("ai.llm_provider_order", ["gemini", "anthropic", "openai", "deepseek", "openrouter", "nvidia"])
             self.providers = [all_p[n] for n in order if n in all_p and all_p[n].available]
         if not self.providers:

@@ -12,6 +12,9 @@ jobs:
     timeout-minutes: 15
     env:
       NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+      OMNIROUTE_BASE_URL: ${{ secrets.OMNIROUTE_BASE_URL }}
+      OMNIROUTE_API_KEY: ${{ secrets.OMNIROUTE_API_KEY }}
+      OMNIROUTE_MODEL: ${{ secrets.OMNIROUTE_MODEL }}
       NVIDIA_MODEL: ${{ secrets.NVIDIA_MODEL }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}

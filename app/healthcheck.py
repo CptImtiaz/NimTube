@@ -8,7 +8,7 @@ from .config import Settings, env
 T = 25
 
 
-SECRET_VARS = ("NVIDIA_API_KEY", "GEMINI_API_KEY", "TAVILY_API_KEY", "PEXELS_API_KEY", "PIXABAY_API_KEY",
+SECRET_VARS = ("OMNIROUTE_API_KEY", "OMNIROUTE_BASE_URL", "NVIDIA_API_KEY", "GEMINI_API_KEY", "TAVILY_API_KEY", "PEXELS_API_KEY", "PIXABAY_API_KEY",
                "COVERR_API_KEY", "HF_TOKEN", "YOUTUBE_API_KEY", "ELEVENLABS_API_KEY", "REDDIT_CLIENT_ID",
                "REDDIT_CLIENT_SECRET", "YT_CLIENT_ID", "YT_CLIENT_SECRET", "YT_REFRESH_TOKEN", "ZAPIER_UPLOAD_HOOK", "STATE_PASSPHRASE", "NASA_API_KEY")
 
@@ -113,8 +113,16 @@ def check_kokoro(s: Settings):
     return ok, "installed (free voice ready)" if ok else "not installed in this environment"
 
 
+def check_omniroute(s: Settings):
+    from .llm import OpenAICompatProvider
+    p = OpenAICompatProvider(s, None, "omniroute")
+    out = p.complete("You are a test.", 'Return {"ok": true}')
+    return "ok" in out.lower(), f"model {p.model} answered"
+
+
 CHECKS = [  # (label, required env var or None, function, needed?)
-    ("NVIDIA (DeepSeek default LLM)", "NVIDIA_API_KEY", check_nvidia, True),
+    ("OmniRoute gateway (LLM)", "OMNIROUTE_API_KEY", check_omniroute, False),
+    ("NVIDIA (DeepSeek LLM)", "NVIDIA_API_KEY", check_nvidia, False),
     ("Gemini (backup LLM)", "GEMINI_API_KEY", check_gemini, False),
     ("Tavily (research)", "TAVILY_API_KEY", check_tavily, True),
     ("Pixabay (footage)", "PIXABAY_API_KEY", check_pixabay, False),

@@ -107,3 +107,23 @@ def test_nvidia_skips_unavailable_and_stalled_models(monkeypatch, settings):
     assert p.complete("s", "p") == '{"ok": 1}'
     assert calls == ["deepseek-ai/deepseek-v4.1-flash", "nvidia/nemotron-3-super-120b-a12b",
                      "nvidia/nemotron-3-nano-30b-a3b"]
+
+
+def test_omniroute_provider_uses_gateway_url_and_listed_model(monkeypatch, settings):
+    import requests
+    from app import llm as L
+    monkeypatch.setenv("OMNIROUTE_BASE_URL", "https://omniroute.example.com")
+    monkeypatch.setenv("OMNIROUTE_API_KEY", "sk-omni")
+    seen = {}
+    monkeypatch.setattr(L.http, "request", lambda m, url, **k: Resp({"data": [{"id": "text-embedding-3"},
+                                                                             {"id": "kimi/kimi-k2"}]}))
+
+    def post(url, json=None, **k):
+        seen["url"], seen["model"] = url, json["model"]
+        return Resp({"choices": [{"message": {"content": "{\"ok\": 1}"}}], "usage": {}})
+    monkeypatch.setattr(requests, "post", post)
+    p = L.OpenAICompatProvider(settings, None, "omniroute")
+    assert p.available and p.complete("s", "p") == '{"ok": 1}'
+    assert seen["url"] == "https://omniroute.example.com/v1/chat/completions" and seen["model"] == "kimi/kimi-k2"
+    monkeypatch.delenv("OMNIROUTE_BASE_URL")
+    assert not L.OpenAICompatProvider(settings, None, "omniroute").available

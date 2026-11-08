@@ -116,7 +116,7 @@ ai:
   # nvidia (free build.nvidia.com key) is TRIAL/TESTING ONLY per NVIDIA's terms — keep it last for published videos.
   # NOTE: the free build.nvidia.com key is TRIAL/TESTING ONLY per NVIDIA's terms (production needs NVIDIA AI Enterprise
   # or a paid partner endpoint). Chosen by the channel owner as default; Gemini and the others remain fallbacks.
-  llm_provider_order: [nvidia, gemini, anthropic, openai, deepseek, openrouter]
+  llm_provider_order: [omniroute, nvidia, gemini, anthropic, openai, deepseek, openrouter]
   nvidia_model: auto                # auto = first available from the preference list below (or set NVIDIA_MODEL)
   nvidia_model_preference:           # DeepSeek V4.1 Flash is the default; Nemotron models are fallbacks
     - deepseek-ai/deepseek-v4.1-flash
@@ -126,6 +126,10 @@ ai:
     - nvidia/llama-3.3-nemotron-super-49b-v1.5
   deepseek_model: deepseek-chat
   openrouter_model: "deepseek/deepseek-v4-flash:free"
+  # OmniRoute gateway (OMNIROUTE_BASE_URL + OMNIROUTE_API_KEY). "auto" = first preferred model the gateway lists,
+  # or set OMNIROUTE_MODEL to a model / combo name from your OmniRoute dashboard.
+  omniroute_model: auto
+  omniroute_model_preference: [deepseek/deepseek-v4-flash, gemini/gemini-3.8-flash, kimi/kimi-k2, glm/glm-4.6]
   anthropic_model: claude-sonnet-5-5
   anthropic_research_model: claude-sonnet-5-5
   anthropic_max_searches: 8
