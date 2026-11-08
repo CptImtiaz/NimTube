@@ -1,35 +1,18 @@
-// FILE: app/api/toggle/route.ts   — deploy on Vercel (NOT Shopify)
-// ---------------------------------------------------------------------------
-// Turns your Shopify storefront OFF/ON by swapping which theme is published.
-//   OFF  -> publishes your "Maintenance/Closed" theme
-//   ON   -> republishes your live store theme
+// FILE: app/api/toggle/route.ts  — the ON/OFF action (theme swap).
+// Uses the token captured during OAuth install (stored in KV), so you never
+// paste a token anywhere.
 //
-// Env vars (set in Vercel → Settings → Environment Variables; never in code):
-//   SHOPIFY_STORE_DOMAIN     your-store.myshopify.com
-//   SHOPIFY_ADMIN_TOKEN      shpat_... (custom app token, scopes: read_themes, write_themes ONLY)
-//   LIVE_THEME_ID            numeric id of your real theme
-//   MAINTENANCE_THEME_ID     numeric id of your "Closed" theme
-//   CONTROL_PASSWORD         a secret you choose, required to use the button
-// ---------------------------------------------------------------------------
+// Env vars:
+//   SHOPIFY_STORE_DOMAIN   wellessia.myshopify.com
+//   LIVE_THEME_ID          numeric id of your live theme
+//   MAINTENANCE_THEME_ID   numeric id of your "Closed" theme
+//   CONTROL_PASSWORD       secret required to press the button
 
 import { NextRequest, NextResponse } from 'next/server'
+import { kv } from '@vercel/kv'
 
+export const runtime = 'nodejs'
 const API_VERSION = '2025-01'
-
-async function shopify(query: string, variables: Record<string, unknown>) {
-  const res = await fetch(
-    `https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/api/${API_VERSION}/graphql.json`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': process.env.SHOPIFY_ADMIN_TOKEN as string,
-      },
-      body: JSON.stringify({ query, variables }),
-    },
-  )
-  return res.json()
-}
 
 const PUBLISH = `mutation themePublish($id: ID!) {
   themePublish(id: $id) { theme { id name } userErrors { field message } }
@@ -41,24 +24,35 @@ export async function POST(req: NextRequest) {
   if (!password || password !== process.env.CONTROL_PASSWORD) {
     return NextResponse.json({ error: 'wrong password' }, { status: 401 })
   }
-  if (action !== 'off' && action !== 'on') {
+  if (action !== 'on' && action !== 'off') {
     return NextResponse.json({ error: 'action must be on/off' }, { status: 400 })
+  }
+
+  const shop = process.env.SHOPIFY_STORE_DOMAIN as string
+  const token = await kv.get<string>(`token:${shop}`)
+  if (!token) {
+    return NextResponse.json(
+      { error: `app not installed on ${shop} yet — open /api/auth?shop=${shop} first` },
+      { status: 409 },
+    )
   }
 
   const themeId =
     action === 'off' ? process.env.MAINTENANCE_THEME_ID : process.env.LIVE_THEME_ID
 
-  const data = await shopify(PUBLISH, {
-    id: `gid://shopify/OnlineStoreTheme/${themeId}`,
+  const res = await fetch(`https://${shop}/admin/api/${API_VERSION}/graphql.json`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Shopify-Access-Token': token },
+    body: JSON.stringify({
+      query: PUBLISH,
+      variables: { id: `gid://shopify/OnlineStoreTheme/${themeId}` },
+    }),
   })
+  const data = await res.json()
 
   const errs = data?.data?.themePublish?.userErrors
   if (data.errors || (errs && errs.length)) {
-    // Most likely the themePublish exemption — surfaced plainly, not swallowed.
-    return NextResponse.json(
-      { ok: false, action, detail: data.errors ?? errs },
-      { status: 422 },
-    )
+    return NextResponse.json({ ok: false, action, detail: data.errors ?? errs }, { status: 422 })
   }
 
   return NextResponse.json({ ok: true, action, published: data.data.themePublish.theme })
