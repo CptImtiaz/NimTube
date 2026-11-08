@@ -1,3 +1,0 @@
-TEST FIXTURE PAGE (offline). Encyclopedia entry.
-The mean diameter of Europa is about 3,122 km, according to measurements from spacecraft missions.
-Further details on discovery history.

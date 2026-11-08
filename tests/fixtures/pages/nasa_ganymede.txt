@@ -1,3 +1,0 @@
-TEST FIXTURE PAGE (offline). Ganymede overview.
-Ganymede has a mean diameter of 5,268 kilometers (3,273 miles), making it one of the large moons of Jupiter.
-More text about orbit and surface features follows here for realism. 

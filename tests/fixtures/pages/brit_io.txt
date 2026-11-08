@@ -1,3 +1,0 @@
-TEST FIXTURE PAGE (offline). Encyclopedia entry.
-The mean diameter of Io is about 3,643 km, according to measurements from spacecraft missions.
-Further details on discovery history.
