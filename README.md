@@ -1,33 +1,43 @@
-# Store Switch
+# Store Switch (overlay)
 
-A password-protected ON/OFF button for a Shopify storefront. It works by
-swapping which theme is published (`themePublish`): OFF publishes a
-"Closed/Maintenance" theme, ON republishes the live theme.
+A password-protected ON/OFF button for the Wellessia storefront. A tiny snippet
+in the Shopify theme checks this app on every page load; when the switch is ON,
+it shows a full-screen "We'll be back soon" overlay.
+
+- `app/page.tsx` — the password-protected control button
+- `app/api/toggle/route.ts` — flips the flag in Upstash (needs the password)
+- `app/api/status/route.ts` — PUBLIC; the storefront reads the flag here
+
+No OAuth, no Shopify token. The on/off state lives as a single key in Upstash
+Redis.
 
 ## Environment variables (set in Vercel → Settings → Environment Variables)
 
 | Variable | What it is |
 |---|---|
-| `SHOPIFY_STORE_DOMAIN` | `your-store.myshopify.com` |
-| `SHOPIFY_ADMIN_TOKEN` | Custom-app Admin API token (`shpat_…`). Scopes: **`read_themes`, `write_themes` only** |
-| `LIVE_THEME_ID` | Numeric id of your real/live theme |
-| `MAINTENANCE_THEME_ID` | Numeric id of your "Closed" theme |
+| `UPSTASH_REDIS_REST_URL` | From your Upstash database (REST section) |
+| `UPSTASH_REDIS_REST_TOKEN` | From your Upstash database (REST section) |
 | `CONTROL_PASSWORD` | A secret you choose — required to use the button |
 
-> Never commit these values. Enter them only in the Vercel dashboard.
+## Shopify snippet
 
-## Setup
+Create `snippets/maintenance.liquid` in your theme with the script below, then
+add `{% render 'maintenance' %}` right after `<head>` in `layout/theme.liquid`.
 
-1. In Shopify admin, duplicate your live theme and edit the copy into a
-   simple "We're closed, back soon" page. Note both theme IDs (the number
-   in each theme's editor URL).
-2. Create a custom app (Settings → Apps and sales channels → Develop apps),
-   grant **only** `read_themes` and `write_themes`, install it, copy the token.
-3. Add the five env vars above in Vercel.
-4. Open the deployed URL, enter your control password, tap **Turn OFF / Turn ON**.
+```liquid
+<script>
+  fetch("https://nimtube.vercel.app/api/status")
+    .then(r => r.json())
+    .then(d => {
+      if (d.maintenance) {
+        document.documentElement.innerHTML =
+          '<body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;background:#111;color:#fff;text-align:center"><div><h1>We\'ll be back soon</h1><p>Wellessia is updating. Check back shortly.</p></div></body>';
+      }
+    });
+</script>
+```
 
-## Note on `themePublish`
+## Note
 
-Shopify may require a theme-API exemption for custom apps. If the first OFF
-tap returns a permissions error, the button surfaces it — file the exemption
-request and it will work once approved.
+The overlay runs in the visitor's browser, so a technical visitor could bypass
+it. It's ideal for pausing sales during updates, not a hard lock.
