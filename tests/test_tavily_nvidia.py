@@ -51,8 +51,10 @@ def test_tavily_research_verifies_quotes_against_extracted_pages(settings, db, m
                 {"name": "Ganymede", "value": 5268, "unit": "km", "as_of": "2024", "evidence": [
                     {"url": "https://www.nasa.gov/moons", "quote": "Ganymede has a mean diameter of 5,268 kilometers, the largest moon."},
                     {"url": "https://www.britannica.com/moons", "quote": "The mean diameter of Ganymede is about 5,268 km in total."}]},
-                {"name": "Titan", "value": 5150, "unit": "km", "as_of": "2024", "evidence": [
-                    {"url": "https://www.nasa.gov/moons", "quote": "Titan has a mean diameter of 9,999 kilometers, invented."}]}]}
+                {"name": "Titan", "value": 9999, "unit": "km", "as_of": "2024", "evidence": [
+                    {"url": "https://www.nasa.gov/moons", "quote": "Titan has a mean diameter of 9,999 kilometers, invented."}]},
+                {"name": "Callisto", "value": 4821, "unit": "km", "as_of": "2024", "evidence": [
+                    {"url": "https://www.nasa.gov/moons", "quote": "Callisto is 4,821 km wide."}]}]}
     # the fetcher is blocked in tests -> verifier must fall back to the Tavily-extracted text
     monkeypatch.setattr(engine, "fetch_page", lambda s, u: {"url": u, "final_url": u, "domain": tavily.domain_of(u),
                                                             "title": "", "text": "", "sha256": "",
@@ -60,7 +62,7 @@ def test_tavily_research_verifies_quotes_against_extracted_pages(settings, db, m
     settings.mock = False
     res = engine.research_topic(settings, db, FakeLLM(), {"title": "Top 10 Largest Moons", "ranking_type": "factual",
                                                          "metric": "mean diameter", "unit": "km"}, "j")
-    assert [e["name"] for e in res["entries"]] == ["Ganymede"]         # Titan's invented quote was rejected
+    assert [e["name"] for e in res["entries"]] == ["Ganymede"]         # invented value / absent entry rejected
     assert set(res["domains"]) == {"nasa.gov", "britannica.com"}
 
 
@@ -127,3 +129,14 @@ def test_omniroute_provider_uses_gateway_url_and_listed_model(monkeypatch, setti
     assert seen["url"] == "https://omniroute.example.com/v1/chat/completions" and seen["model"] == "kimi/kimi-k2"
     monkeypatch.delenv("OMNIROUTE_BASE_URL")
     assert not L.OpenAICompatProvider(settings, None, "omniroute").available
+
+
+def test_repair_quote_finds_real_sentence():
+    from app.research.verifier import repair_quote, verify_fact
+    page = ("Overview of lakes. The Caspian Sea covers an area of 371,000 square kilometres, making it the largest. "
+            "Lake Superior has a surface area of 82,100 km2 and is the largest freshwater lake by area.")
+    q = repair_quote("Lake Superior", 82100, page)
+    assert q and q.startswith("Lake Superior has a surface area of 82,100")
+    assert verify_fact({"quote": q, "value": 82100}, {"status": "ok", "text": page})[0]
+    assert repair_quote("Lake Victoria", 68800, page) is None          # never invents evidence
+    assert repair_quote("Lake Superior", 99999, page) is None

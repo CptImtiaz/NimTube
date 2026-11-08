@@ -82,3 +82,26 @@ def verify_fact(fact: dict, page: dict) -> tuple[bool, str]:
     if fact.get("value") is not None and not number_matches(float(fact["value"]), quote):
         return False, "claimed value not present in quote"
     return True, "verified"
+
+
+def repair_quote(name: str, value, page_text: str) -> str | None:
+    """When a model paraphrases instead of copying, find the REAL sentence on the page that names the entry and
+    contains the claimed number. Returns that verbatim sentence (so the evidence is still genuinely on the page)."""
+    if value is None or not page_text:
+        return None
+    toks = [t for t in normalise(name).split() if t not in ("the", "a", "an", "of") and len(t) > 2]
+    if not toks:
+        return None
+    sentences = re.split(r"(?<=[\.\!\?])\s+|\n+|\s\|\s", page_text)
+    best = None
+    for sent in sentences:
+        sent = sent.strip()
+        if not (25 <= len(sent) <= 400):
+            continue
+        ns = normalise(sent)
+        if sum(t in ns.split() for t in toks) < max(1, (len(toks) + 1) // 2):
+            continue
+        if number_matches(float(value), sent):
+            if best is None or len(sent) < len(best):
+                best = sent
+    return best

@@ -10,7 +10,7 @@ from ..db import DB
 from ..llm import LLM
 from ..log import get_logger
 from .fetcher import fetch_page, domain_of
-from .verifier import verify_fact
+from .verifier import repair_quote, verify_fact
 from . import tavily
 from ..config import env
 
@@ -101,6 +101,20 @@ def research_topic(s: Settings, db: DB, llm: LLM, topic: dict, job_id: str) -> d
                 continue
             fact = {"quote": ev.get("quote", ""), "value": e.get("value")}
             ok, note = verify_fact(fact, page)
+            alt = tavily_pages.get(ev.get("url"))
+            if not ok and alt:                    # the fetched page and Tavily's extract can differ (tables, JS)
+                alt_page = {**page, "status": "ok", "text": alt["text"]}
+                ok, note = verify_fact(fact, alt_page)
+            if not ok and e.get("value") is not None:
+                # model paraphrased: use the verbatim sentence from the page that names the entry and has the number
+                for text in (page.get("text", ""), (alt or {}).get("text", "")):
+                    fixed = repair_quote(e.get("name", ""), e.get("value"), text)
+                    if fixed:
+                        ev["quote"], fact["quote"] = fixed, fixed
+                        ok, note = verify_fact(fact, {**page, "status": "ok", "text": text})
+                        if ok:
+                            note = "verified (quote repaired from page)"
+                            break
             db.execute("INSERT INTO facts (job_id, entry_rank, entry_name, claim, value, unit, quote, source_url, "
                        "verified, note) VALUES (?,?,?,?,?,?,?,?,?,?)",
                        (job_id, None, e.get("name"), ev.get("claim"), e.get("value"), e.get("unit"),
